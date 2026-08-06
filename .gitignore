@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+.DS_Store
+
+# Chaves de ambiente — nunca comitar
+.env
+.env.*
+!.env.example
+
+# Config local de ferramenta
+.claude
