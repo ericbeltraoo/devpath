@@ -20,6 +20,10 @@ create table if not exists public.progresso (
   criado_em     timestamptz not null default now()
 );
 
+-- Contador para o limite de escritas por minuto (secao 4).
+alter table public.progresso add column if not exists janela_inicio timestamptz not null default now();
+alter table public.progresso add column if not exists janela_escritas integer not null default 0;
+
 comment on table public.progresso is 'Estado completo do DevPath, uma linha por usuario.';
 
 -- ---------------------------------------------------------------------------
@@ -71,13 +75,20 @@ revoke all on table public.progresso from anon;
 grant select, insert, update, delete on table public.progresso to authenticated;
 
 -- ---------------------------------------------------------------------------
--- 4. Validacao e carimbo de data
+-- 4. Validacao, limite de taxa e carimbo de data
 -- ---------------------------------------------------------------------------
 -- Feito em TRIGGER, nao em CHECK, porque CHECK exige funcao immutable.
 --
 --   - limita o tamanho do JSON (evita um usuario autenticado encher o banco)
 --   - garante que "dados" e um objeto JSON, nao array/numero/string
+--   - limita 60 gravacoes por minuto por usuario
 --   - carimba atualizado_em no servidor: nunca confie na data que o cliente manda
+--
+-- Sobre o limite de 60/min: o app usa debounce de 1,2s, entao no uso normal
+-- mais intenso chega a ~50 gravacoes por minuto. Um script tentando martelar
+-- a tabela bate no limite. Como o RLS ja impede escrever na linha de outra
+-- pessoa, o pior caso e o usuario prejudicar a propria cota — este limite
+-- protege a cota do projeto no plano gratuito.
 -- ---------------------------------------------------------------------------
 
 drop trigger if exists progresso_atualizado on public.progresso;
@@ -87,6 +98,8 @@ create or replace function public.valida_progresso()
 returns trigger
 language plpgsql
 as $$
+declare
+  limite_por_minuto constant integer := 60;
 begin
   if jsonb_typeof(new.dados) <> 'object' then
     raise exception 'O campo dados precisa ser um objeto JSON.'
@@ -96,6 +109,20 @@ begin
   if octet_length(new.dados::text) > 512000 then
     raise exception 'Progresso muito grande (limite de 500 KB).'
       using errcode = '22023';
+  end if;
+
+  -- Janela deslizante simples de 1 minuto, guardada na propria linha.
+  if tg_op = 'UPDATE' and old.janela_inicio > now() - interval '1 minute' then
+    new.janela_inicio  := old.janela_inicio;
+    new.janela_escritas := old.janela_escritas + 1;
+
+    if new.janela_escritas > limite_por_minuto then
+      raise exception 'Muitas gravacoes em pouco tempo. Aguarde um minuto.'
+        using errcode = '53400';
+    end if;
+  else
+    new.janela_inicio   := now();
+    new.janela_escritas := 1;
   end if;
 
   new.atualizado_em = now();

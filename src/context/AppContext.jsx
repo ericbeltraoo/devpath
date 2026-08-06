@@ -6,6 +6,7 @@ import { nuvemAtiva, supabase, carregarNuvem, salvarNuvem } from '../lib/supabas
 const Ctx = createContext(null)
 
 const ATRASO_SALVAR = 1200 // ms de espera antes de mandar para a nuvem
+const MAX_TENTATIVAS = 5 // reenvios com espera exponencial antes de desistir
 
 export function AppProvider({ children }) {
   const [estado, setEstado] = useState(carregar)
@@ -120,18 +121,29 @@ export function AppProvider({ children }) {
 
     setSincronia('salvando')
     clearTimeout(timer.current)
-    timer.current = setTimeout(async () => {
+
+    // Tenta gravar; se falhar (rede caiu, limite de taxa, servidor fora),
+    // reagenda com espera exponencial em vez de desistir na primeira.
+    const tentar = async (tentativa) => {
       try {
         await salvarNuvem(userId, estado)
         setUltimoSync(new Date().toISOString())
         setSincronia('ok')
         setErroSync(null)
       } catch (e) {
-        console.error('Falha ao salvar na nuvem:', e)
-        setErroSync(e.message || 'Falha ao salvar')
-        setSincronia('erro')
+        if (tentativa >= MAX_TENTATIVAS) {
+          console.error('Falha ao salvar na nuvem:', e)
+          setErroSync(e.message || 'Falha ao salvar')
+          setSincronia('erro')
+          return
+        }
+        const espera = Math.min(2 ** tentativa * 1000, 30000)
+        setSincronia('reenviando')
+        timer.current = setTimeout(() => tentar(tentativa + 1), espera)
       }
-    }, ATRASO_SALVAR)
+    }
+
+    timer.current = setTimeout(() => tentar(0), ATRASO_SALVAR)
 
     return () => clearTimeout(timer.current)
   }, [estado, userId, dadosProntos])

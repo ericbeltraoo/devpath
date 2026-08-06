@@ -22,6 +22,7 @@ const LINKS = [
 const ESTADOS_SYNC = {
   ok: { cor: 'var(--ok)', texto: 'Sincronizado' },
   salvando: { cor: 'var(--accent)', texto: 'Salvando...' },
+  reenviando: { cor: 'var(--warn)', texto: 'Reenviando...' },
   carregando: { cor: 'var(--accent)', texto: 'Carregando...' },
   migrado: { cor: 'var(--ok)', texto: 'Progresso migrado' },
   erro: { cor: 'var(--danger)', texto: 'Erro ao sincronizar' },
