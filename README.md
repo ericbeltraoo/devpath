@@ -67,11 +67,23 @@ Reinicie o `npm run dev` — o Vite só lê o `.env` na inicialização.
 
 Em **Authentication → Providers → Email**, decida se quer *Confirm email* ligado. Ligado é mais seguro; desligado deixa o cadastro instantâneo (aceitável para uso pessoal).
 
+## Segurança
+
+O checklist completo — o que já está feito no código e o que você precisa configurar nos painéis — está em **[SEGURANCA.md](SEGURANCA.md)**.
+
+Leia antes de publicar. O item mais importante: **crie sua conta antes de fechar o cadastro público**, ou você fica trancado do lado de fora.
+
 ## Publicando na Vercel
 
-1. Suba o projeto para um repositório no GitHub (o `.env` está no `.gitignore` e **não** vai junto — é o comportamento correto).
+O repositório já está inicializado com o primeiro commit feito. Falta apenas apontar para o seu GitHub:
+
+```bash
+git remote add origin https://github.com/SEU-USUARIO/devpath.git; git push -u origin main
+```
+
+1. Crie o repositório no GitHub (**privado**) e rode o comando acima. O `.env` está no `.gitignore` e **não** vai junto — é o comportamento correto.
 2. Em [vercel.com](https://vercel.com) → *Add New → Project* → importe o repositório.
-3. A Vercel detecta Vite sozinha. Confirme: build `npm run build`, output `dist`.
+3. A Vercel detecta Vite sozinha. Confirme: build `npm run build`, output `dist`. O `vercel.json` já traz os headers de segurança (CSP, HSTS, `X-Frame-Options`) e o cache dos assets.
 4. Em **Environment Variables**, adicione `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os mesmos valores do `.env`.
 5. Deploy.
 6. Volte ao Supabase em **Authentication → URL Configuration** e coloque a URL da Vercel em *Site URL* — sem isso o link de recuperação de senha aponta para `localhost`.
