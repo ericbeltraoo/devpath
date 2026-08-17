@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { carregar, salvar, normalizar, temProgresso, ESTADO_INICIAL } from '../lib/storage'
 import { gerarPlano } from '../lib/planner'
+import { agendarPrimeira, reagendar, filaDeRevisao, avaliarBloqueio } from '../lib/revisao'
+import { TRILHAS, todosModulos } from '../data/tracks'
 import { nuvemAtiva, supabase, carregarNuvem, salvarNuvem } from '../lib/supabase'
 
 const Ctx = createContext(null)
@@ -204,24 +206,69 @@ export function AppProvider({ children }) {
 
       concluirOnboarding: () => setEstado((e) => ({ ...e, onboarded: true })),
 
+      // Concluir um topico agenda automaticamente a primeira revisao.
+      // Desmarcar remove o agendamento — nao faz sentido revisar o que voce
+      // declarou que nao aprendeu.
       toggleTopico: (moduloId, indice) =>
         setEstado((e) => {
           const chave = `${moduloId}:${indice}`
           const topicos = { ...e.topicos }
-          if (topicos[chave]) delete topicos[chave]
-          else topicos[chave] = new Date().toISOString()
-          return { ...e, topicos }
+          const revisoes = { ...e.revisoes }
+
+          if (topicos[chave]) {
+            delete topicos[chave]
+            delete revisoes[chave]
+          } else {
+            topicos[chave] = new Date().toISOString()
+            if (!revisoes[chave]) revisoes[chave] = agendarPrimeira()
+          }
+          return { ...e, topicos, revisoes }
         }),
 
       marcarModulo: (modulo, valor) =>
         setEstado((e) => {
           const topicos = { ...e.topicos }
+          const revisoes = { ...e.revisoes }
           modulo.topicos.forEach((_, i) => {
             const chave = `${modulo.id}:${i}`
-            if (valor) topicos[chave] = new Date().toISOString()
-            else delete topicos[chave]
+            if (valor) {
+              topicos[chave] = new Date().toISOString()
+              if (!revisoes[chave]) revisoes[chave] = agendarPrimeira()
+            } else {
+              delete topicos[chave]
+              delete revisoes[chave]
+            }
           })
-          return { ...e, topicos }
+          return { ...e, topicos, revisoes }
+        }),
+
+      registrarRevisao: (chave, resultado) =>
+        setEstado((e) => ({
+          ...e,
+          revisoes: { ...e.revisoes, [chave]: reagendar(e.revisoes[chave], resultado) },
+        })),
+
+      setBloqueio: (parcial) =>
+        setEstado((e) => ({ ...e, bloqueio: { ...e.bloqueio, ...parcial } })),
+
+      setPomodoroConfig: (parcial) =>
+        setEstado((e) => ({
+          ...e,
+          pomodoro: { ...e.pomodoro, config: { ...e.pomodoro.config, ...parcial } },
+        })),
+
+      registrarSessaoPomodoro: (sessao) =>
+        setEstado((e) => ({
+          ...e,
+          pomodoro: { ...e.pomodoro, sessoes: [...e.pomodoro.sessoes, sessao].slice(-400) },
+        })),
+
+      setDesafio: (id, parcial) =>
+        setEstado((e) => {
+          const desafios = { ...e.desafios }
+          if (parcial === null) delete desafios[id]
+          else desafios[id] = { ...(desafios[id] || {}), ...parcial }
+          return { ...e, desafios }
         }),
 
       setNota: (moduloId, texto) => setEstado((e) => ({ ...e, notas: { ...e.notas, [moduloId]: texto } })),
@@ -274,9 +321,37 @@ export function AppProvider({ children }) {
 
   const plano = useMemo(() => gerarPlano(estado.perfil, estado.topicos), [estado.perfil, estado.topicos])
 
+  // Indice "moduloId:indice" -> contexto do topico, para a tela de revisao
+  const indiceTopicos = useMemo(() => {
+    const mapa = {}
+    for (const trilha of TRILHAS) {
+      for (const m of todosModulos(trilha)) {
+        m.topicos.forEach((texto, i) => {
+          mapa[`${m.id}:${i}`] = {
+            texto,
+            moduloId: m.id,
+            moduloTitulo: m.titulo,
+            faseNome: m.faseNome,
+            trilhaId: trilha.id,
+            trilhaNome: trilha.nome,
+            trilhaIcone: trilha.icone,
+            trilhaCor: trilha.cor,
+          }
+        })
+      }
+    }
+    return mapa
+  }, [])
+
+  const fila = useMemo(() => filaDeRevisao(estado.revisoes, indiceTopicos), [estado.revisoes, indiceTopicos])
+  const bloqueio = useMemo(() => avaliarBloqueio(fila, estado.bloqueio), [fila, estado.bloqueio])
+
   const valor = {
     ...api,
     plano,
+    fila,
+    bloqueio,
+    indiceTopicos,
     // nuvem
     nuvemAtiva,
     sessao,

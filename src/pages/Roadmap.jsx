@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { TRILHAS, getTrilha, todosModulos, horasTrilha } from '../data/tracks'
 import { progressoModulo } from '../lib/planner'
-import { Bar, ChipCurso } from '../components/ui'
+import { Bar, ChipCurso, Callout } from '../components/ui'
 
 function Modulo({ modulo, aberto }) {
-  const { estado, toggleTopico, marcarModulo, setNota } = useApp()
+  const { estado, toggleTopico, marcarModulo, setNota, bloqueio } = useApp()
   const p = progressoModulo(modulo, estado.topicos)
   const [notaAberta, setNotaAberta] = useState(false)
+  const [licaoAberta, setLicaoAberta] = useState(null)
+
+  // Com a fila de revisao estourada, so e permitido DESMARCAR (corrigir um
+  // engano) — marcar topico novo fica travado ate a fila baixar.
+  const travado = Boolean(bloqueio)
 
   return (
     <div className={`modulo${modulo.marcoAtual ? ' marco' : ''}`} id={modulo.id} ref={aberto ? (el) => el?.scrollIntoView({ block: 'center' }) : undefined}>
@@ -27,10 +32,11 @@ function Modulo({ modulo, aberto }) {
         <div className="modulo-meta">
           <button
             className="btn sm ghost"
+            disabled={travado && p.pct !== 100}
             onClick={() => marcarModulo(modulo, p.pct !== 100)}
-            title={p.pct === 100 ? 'Desmarcar tudo' : 'Marcar tudo'}
+            title={travado && p.pct !== 100 ? 'Travado: derrube a fila de revisao' : p.pct === 100 ? 'Desmarcar tudo' : 'Marcar tudo'}
           >
-            {p.pct === 100 ? 'Desmarcar' : 'Marcar tudo'}
+            {p.pct === 100 ? 'Desmarcar' : travado ? '🔒 Travado' : 'Marcar tudo'}
           </button>
         </div>
       </div>
@@ -42,14 +48,72 @@ function Modulo({ modulo, aberto }) {
       <ul className="topicos">
         {modulo.topicos.map((t, i) => {
           const feito = !!estado.topicos[`${modulo.id}:${i}`]
+          const proibido = travado && !feito
           return (
-            <li key={i} className={`topico${feito ? ' feito' : ''}`} onClick={() => toggleTopico(modulo.id, i)}>
-              <input type="checkbox" checked={feito} readOnly />
+            <li
+              key={i}
+              className={`topico${feito ? ' feito' : ''}`}
+              style={proibido ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+              title={proibido ? 'Travado ate voce derrubar a fila de revisao' : undefined}
+              onClick={() => !proibido && toggleTopico(modulo.id, i)}
+            >
+              <input type="checkbox" checked={feito} readOnly disabled={proibido} />
               <span>{t}</span>
             </li>
           )
         })}
       </ul>
+
+      {modulo.licoes?.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div className="small" style={{ fontWeight: 650, color: 'var(--text-2)', marginBottom: 8 }}>
+            📖 Lições deste módulo ({modulo.licoes.length})
+          </div>
+          {modulo.licoes.map((l, i) => {
+            const aberta = licaoAberta === i
+            return (
+              <div className="acc" key={i} style={{ marginBottom: 6 }}>
+                <div className="acc-head" style={{ padding: '10px 13px' }} onClick={() => setLicaoAberta(aberta ? null : i)}>
+                  <span style={{ flex: 1, fontSize: 13.8, fontWeight: 560 }}>{l.titulo}</span>
+                  <span className="muted small">{aberta ? '▲' : '▼'}</span>
+                </div>
+                {aberta && (
+                  <div className="acc-body" style={{ padding: '2px 13px 14px' }}>
+                    <p style={{ marginTop: 12, fontSize: 13.8, lineHeight: 1.65 }}>{l.explicacao}</p>
+
+                    {l.codigo && (
+                      <pre
+                        className="mono"
+                        style={{
+                          background: 'var(--bg-2)', border: '1px solid var(--border)',
+                          borderRadius: 'var(--r-sm)', padding: 13, overflowX: 'auto',
+                          fontSize: 12.2, lineHeight: 1.6, margin: '10px 0',
+                        }}
+                      >
+                        {l.codigo}
+                      </pre>
+                    )}
+
+                    {l.erroComum && (
+                      <div className="callout danger" style={{ marginTop: 10 }}>
+                        <b>Erro comum</b>
+                        {l.erroComum}
+                      </div>
+                    )}
+
+                    {l.pergunta && (
+                      <div className="callout" style={{ marginTop: 10 }}>
+                        <b>Responda antes de seguir</b>
+                        {l.pergunta}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {modulo.entregavel && (
         <div className="entregavel">
@@ -87,7 +151,7 @@ function Modulo({ modulo, aberto }) {
 }
 
 export default function Roadmap() {
-  const { estado } = useApp()
+  const { estado, bloqueio } = useApp()
   const [params, setParams] = useSearchParams()
   const trilhaId = params.get('trilha') || 'java'
   const faseParam = params.get('fase')
@@ -125,10 +189,17 @@ export default function Roadmap() {
       <div className="page-head">
         <h1>Roadmap</h1>
         <div className="sub">
-          Cada topico e um item marcavel. Marque so o que voce consegue explicar para outra pessoa — nao o que voce
-          apenas assistiu.
+          Cada tópico é um item marcável. Marque só o que você consegue explicar para outra pessoa — não o que você
+          apenas assistiu. Ao marcar, o tópico entra automaticamente na fila de revisão espaçada.
         </div>
       </div>
+
+      {bloqueio && (
+        <Callout tipo="danger" titulo="🔒 Conteúdo novo travado">
+          {bloqueio.mensagem}{' '}
+          <Link to="/revisao" style={{ fontWeight: 600 }}>Ir para a revisão →</Link>
+        </Callout>
+      )}
 
       <div className="tabs">
         {TRILHAS.map((t) => (

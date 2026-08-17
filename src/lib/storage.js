@@ -9,13 +9,35 @@ export const ESTADO_INICIAL = {
     horasSemana: 12,
     dataInicio: new Date().toISOString().slice(0, 10),
   },
-  topicos: {}, // "moduloId:indice" -> true
+  topicos: {}, // "moduloId:indice" -> ISO da conclusao
+  revisoes: {}, // "moduloId:indice" -> { nivel, proxima, ultima, acertos, falhas }
   exercicios: {}, // "ex-id" -> 'fazendo' | 'feito'
+  desafios: {}, // "df-id" -> { status, iniciadoEm, entregueEm, autoavaliacao }
   checklist: {}, // "ck-id" -> true
   entrevistas: {}, // "p-id" -> true (domino essa resposta)
   notas: {}, // "moduloId" -> texto
   linkedin: { respostas: {}, historico: [] },
+
+  // Trava de conteudo novo quando ha revisao atrasada demais.
+  // Desligar e permitido, mas anula o motivo de existir do sistema.
+  bloqueio: { ativo: true, limite: 15 },
+
+  pomodoro: {
+    config: {
+      foco: 25,
+      pausaCurta: 5,
+      pausaLonga: 15,
+      ciclosAteLonga: 4,
+      autoIniciar: true,
+      som: true,
+      volume: 0.6,
+      notificacao: true,
+    },
+    sessoes: [], // { fim, minutos, tipo, moduloId }
+  },
 }
+
+const MAX_SESSOES = 400
 
 /** Completa um estado salvo com os campos que faltam (versoes antigas do app). */
 export function normalizar(salvo) {
@@ -25,6 +47,14 @@ export function normalizar(salvo) {
     ...salvo,
     perfil: { ...ESTADO_INICIAL.perfil, ...(salvo.perfil || {}) },
     linkedin: { ...ESTADO_INICIAL.linkedin, ...(salvo.linkedin || {}) },
+    bloqueio: { ...ESTADO_INICIAL.bloqueio, ...(salvo.bloqueio || {}) },
+    pomodoro: {
+      config: { ...ESTADO_INICIAL.pomodoro.config, ...(salvo.pomodoro?.config || {}) },
+      // Corta o historico: o limite de 500 KB por usuario no banco e real.
+      sessoes: (salvo.pomodoro?.sessoes || []).slice(-MAX_SESSOES),
+    },
+    revisoes: salvo.revisoes || {},
+    desafios: salvo.desafios || {},
   }
 }
 

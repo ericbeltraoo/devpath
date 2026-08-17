@@ -1,13 +1,20 @@
 import { NavLink } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import { usePomodoro } from '../context/PomodoroContext'
+import { mmss } from '../lib/pomodoro'
 import { Bar } from './ui'
 
 const LINKS = [
-  { grupo: 'Estudo', itens: [
+  { grupo: 'Foco diario', itens: [
     { to: '/', icone: '📊', texto: 'Painel', end: true },
+    { to: '/revisao', icone: '🔁', texto: 'Revisao', badge: 'revisao' },
+    { to: '/pomodoro', icone: '⏱️', texto: 'Pomodoro', badge: 'pomodoro' },
+  ]},
+  { grupo: 'Estudo', itens: [
     { to: '/plano', icone: '🗺️', texto: 'Meu plano' },
     { to: '/roadmap', icone: '📚', texto: 'Roadmap' },
     { to: '/exercicios', icone: '⌨️', texto: 'Exercicios' },
+    { to: '/desafios', icone: '🎯', texto: 'Desafios' },
   ]},
   { grupo: 'Carreira', itens: [
     { to: '/entrevistas', icone: '🎤', texto: 'Entrevistas' },
@@ -55,7 +62,8 @@ function StatusSync() {
 }
 
 export default function Sidebar() {
-  const { plano, estado } = useApp()
+  const { plano, estado, fila } = useApp()
+  const { rodando, restante } = usePomodoro()
 
   return (
     <aside className="sidebar">
@@ -90,7 +98,24 @@ export default function Sidebar() {
                 className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
               >
                 <span className="nav-icon">{l.icone}</span>
-                {l.texto}
+                <span style={{ flex: 1 }}>{l.texto}</span>
+                {l.badge === 'revisao' && fila.pendentes.length > 0 && (
+                  <span
+                    className="chip"
+                    style={{
+                      padding: '1px 7px', fontSize: 10.5,
+                      background: fila.vencidas.length > 0 ? 'var(--danger)' : 'var(--accent)',
+                      color: '#fff', borderColor: 'transparent',
+                    }}
+                  >
+                    {fila.pendentes.length}
+                  </span>
+                )}
+                {l.badge === 'pomodoro' && rodando && (
+                  <span className="chip" style={{ padding: '1px 7px', fontSize: 10.5, fontVariantNumeric: 'tabular-nums' }}>
+                    {mmss(restante)}
+                  </span>
+                )}
               </NavLink>
             ))}
           </div>

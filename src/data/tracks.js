@@ -306,6 +306,131 @@ export const TRILHAS = [
             ],
             entregavel:
               'Classe utilitaria que calcula idade exata, dias uteis entre duas datas e converte um Instant para o fuso de Sao Paulo.',
+            licoes: [
+              {
+                titulo: 'Por que existem tantos tipos de data',
+                explicacao:
+                  'A pergunta que resolve 90% da confusao e: "esse momento depende de onde a pessoa esta?". Um aniversario nao depende — 15/03/1998 e 15/03/1998 em qualquer lugar do mundo, entao e LocalDate. O instante em que um pagamento foi processado depende — 14h em Sao Paulo e 19h em Londres, mas e o MESMO instante, entao e Instant. LocalDateTime e o meio-termo perigoso: tem data e hora, mas nenhuma referencia de fuso; serve para "a reuniao e as 14h no horario local de quem abrir", nao para registrar quando algo aconteceu. Regra pratica de backend: o que voce grava no banco como "aconteceu em" e quase sempre Instant.',
+                codigo: `// Aniversario: nao tem hora, nao tem fuso
+LocalDate nascimento = LocalDate.of(1998, 3, 15);
+
+// Horario comercial: hora sem data e sem fuso
+LocalTime abertura = LocalTime.of(9, 0);
+
+// "14h30 do dia 6" — sem dizer 14h30 ONDE
+LocalDateTime reuniao = LocalDateTime.of(2026, 8, 6, 14, 30);
+
+// O instante exato em que algo aconteceu, universal
+Instant pagamentoEm = Instant.now();
+
+// O mesmo instante, visto de Sao Paulo
+ZonedDateTime emSP = pagamentoEm.atZone(ZoneId.of("America/Sao_Paulo"));`,
+                erroComum:
+                  'Usar LocalDateTime para registrar quando algo aconteceu. Funciona no seu computador e quebra quando o servidor esta em outro fuso, ou no horario de verao. Se e um evento que aconteceu, e Instant.',
+                pergunta:
+                  'Um usuario em Manaus agenda uma consulta para "10h do dia 20". Voce guarda LocalDateTime ou Instant? E se a clinica for em Sao Paulo? Justifique antes de continuar.',
+              },
+              {
+                titulo: 'Instant, ISO-8601 e o "Z" que voce vai ver em toda API',
+                explicacao:
+                  'Instant e um ponto na linha do tempo contado a partir de 1970-01-01T00:00:00Z, o epoch. Ele nao tem fuso — ou melhor, ele E sempre UTC. Quando voce ve 2026-08-06T14:30:00Z numa resposta de API, esse formato e o ISO-8601 e o Z significa "Zulu", ou seja, UTC. E o padrao porque nao tem ambiguidade: nao existe "6 de agosto" que possa ser lido como 8 de junho, e nao existe duvida de fuso. Toda API seria que voce vai consumir devolve datas assim, e a sua deve devolver tambem.',
+                codigo: `Instant agora = Instant.now();
+System.out.println(agora);            // 2026-08-06T17:30:00.123456Z
+
+// Converter para um fuso especifico, para EXIBIR ao usuario
+ZoneId sp = ZoneId.of("America/Sao_Paulo");
+ZonedDateTime local = agora.atZone(sp);
+System.out.println(local);            // 2026-08-06T14:30:00.123456-03:00[America/Sao_Paulo]
+
+// E o caminho de volta
+Instant deVolta = local.toInstant();
+System.out.println(agora.equals(deVolta));   // true — e o mesmo instante
+
+// Ler uma data que veio de uma API
+Instant recebido = Instant.parse("2026-08-06T17:30:00Z");`,
+                erroComum:
+                  'Achar que converter de fuso "muda o horario". Nao muda: e o mesmo instante, apresentado de outro jeito. Se voce imprimir os dois e comparar com equals(), sao iguais.',
+                pergunta:
+                  'Se sao 14h30 em Sao Paulo e voce converte para o fuso de Tokyo, o Instant muda? Responda antes de rodar o codigo.',
+              },
+              {
+                titulo: 'Duration vs Period vs ChronoUnit — os tres jeitos de medir tempo',
+                explicacao:
+                  'Duration mede tempo em unidades exatas: segundos, minutos, horas. Period mede em unidades de calendario: anos, meses, dias. A diferenca importa mais do que parece, porque mes nao tem tamanho fixo e dia nem sempre tem 24 horas (horario de verao). Duration.ofDays(1) e sempre 24 horas cravadas; Period.ofDays(1) e "o mesmo horario do dia seguinte", que pode ser 23 ou 25 horas. ChronoUnit.between e o atalho quando voce quer so um numero: quantos dias, quantos meses, quantos minutos.',
+                codigo: `LocalDate inicio = LocalDate.of(2026, 1, 31);
+LocalDate fim    = LocalDate.of(2026, 3, 1);
+
+// Period: pensa em calendario
+Period p = Period.between(inicio, fim);
+System.out.println(p.getMonths() + "m " + p.getDays() + "d");  // 1m 1d
+
+// ChronoUnit: da o numero direto
+long dias = ChronoUnit.DAYS.between(inicio, fim);              // 29
+long meses = ChronoUnit.MONTHS.between(inicio, fim);           // 1
+
+// Duration: tempo exato, entre instantes
+Instant t1 = Instant.parse("2026-08-06T10:00:00Z");
+Instant t2 = Instant.parse("2026-08-06T14:30:00Z");
+Duration d = Duration.between(t1, t2);
+System.out.println(d.toMinutes());                             // 270
+
+// Idade: Period e a ferramenta certa
+int idade = Period.between(nascimento, LocalDate.now()).getYears();`,
+                erroComum:
+                  'Calcular idade com ChronoUnit.DAYS.between(...) / 365. Erra em ano bissexto e em quem nasceu em 29/02. Use Period.between(...).getYears().',
+                pergunta:
+                  'Por que Duration.between nao aceita dois LocalDate? Pense no que falta para "duracao exata" fazer sentido.',
+              },
+              {
+                titulo: 'DateTimeFormatter: texto vira data, data vira texto',
+                explicacao:
+                  'Formatter faz os dois caminhos: format() transforma objeto em String para EXIBIR, parse() transforma String em objeto para PROCESSAR. O padrao brasileiro dd/MM/yyyy so deve aparecer na borda do sistema — na tela, no relatorio, no PDF. Por dentro, e entre sistemas, sempre ISO. Atencao ao caso das letras: MM e mes, mm e minuto. Trocar os dois e o bug mais comum do Java inteiro, e ele passa despercebido porque em varios meses os numeros parecem plausiveis.',
+                codigo: `DateTimeFormatter BR = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+LocalDateTime dt = LocalDateTime.of(2026, 8, 6, 14, 30);
+String exibir = dt.format(BR);                    // "06/08/2026 14:30"
+
+LocalDateTime lido = LocalDateTime.parse("06/08/2026 14:30", BR);
+
+// Texto invalido lanca DateTimeParseException — trate na borda
+try {
+    LocalDate.parse("31/02/2026", DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+} catch (DateTimeParseException e) {
+    // 31 de fevereiro nao existe
+}
+
+// Com fuso e nome de mes em portugues
+DateTimeFormatter EXTENSO = DateTimeFormatter
+        .ofPattern("dd 'de' MMMM 'de' yyyy", new Locale("pt", "BR"));`,
+                erroComum:
+                  'Usar "mm" para mes. "dd/mm/yyyy" te devolve o minuto no lugar do mes. Mes e MM maiusculo; minuto e mm minusculo.',
+                pergunta:
+                  'Sua API recebe "06/08/2026" de um formulario. Onde exatamente voce faz o parse: no controller, no service ou na entidade? Justifique pela regra de "converter na borda".',
+              },
+              {
+                titulo: 'Por que Date e Calendar sao proibidos em codigo novo',
+                explicacao:
+                  'O curso mostra Date, Calendar e SimpleDateFormat porque voce VAI encontrar isso em sistema legado, e precisa saber ler. Mas nao escreva codigo novo com eles. Motivos concretos: sao mutaveis, entao qualquer metodo que receba um Date pode alterar o seu objeto sem avisar; SimpleDateFormat nao e thread-safe e corrompe dados silenciosamente sob concorrencia, o que gera bug que so aparece em producao; e o Calendar conta mes a partir de zero, entao janeiro e 0 e dezembro e 11. A API java.time nasceu em 2014 justamente para corrigir tudo isso, e e imutavel por construcao.',
+                codigo: `// LEGADO — saiba ler, nao escreva
+Calendar c = Calendar.getInstance();
+c.set(2026, 7, 6);   // 7 = AGOSTO. Mes comeca em zero.
+
+SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+// Compartilhar este sdf entre threads corrompe a saida
+
+// MODERNO — imutavel, thread-safe, mes e mes
+LocalDate d = LocalDate.of(2026, 8, 6);   // 8 = agosto, como voce esperaria
+DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy"); // seguro entre threads
+
+// Ponte com codigo legado, quando nao der para evitar
+Instant i = new java.util.Date().toInstant();
+java.util.Date legado = java.util.Date.from(Instant.now());`,
+                erroComum:
+                  'Declarar SimpleDateFormat como campo static compartilhado. Parece otimizacao, e na verdade e corrupcao de dados sob concorrencia. DateTimeFormatter pode ser static sem problema.',
+                pergunta:
+                  'Imutabilidade resolve dois dos tres problemas citados. Quais dois, e por que ela resolve cada um?',
+              },
+            ],
             recursos: [
               { tipo: 'doc', titulo: 'java.time — javadoc oficial', url: 'https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/package-summary.html' },
               { tipo: 'artigo', titulo: 'Baeldung — Introduction to Java 8 Date/Time API', url: 'https://www.baeldung.com/java-8-date-time-intro' },
