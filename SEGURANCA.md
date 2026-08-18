@@ -33,6 +33,7 @@ Se a chave `anon` vazar, não aconteceu nada — ela é servida para qualquer vi
 - [x] **Trigger de validação**: limite de 500 KB por usuário, `dados` obrigatoriamente objeto JSON, `atualizado_em` carimbado pelo servidor
 - [x] **`.env` no `.gitignore`** (com exceção explícita para o `.env.example`)
 - [x] **Headers HTTP** em `vercel.json`: CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, Referrer-Policy, Permissions-Policy
+- [x] **CSP em `<meta>`** no `index.html` como rede de segurança para hosts sem cabeçalhos próprios (GitHub Pages). Cobre script, style, img e connect; **não** cobre `frame-ancestors` nem HSTS, que só funcionam como cabeçalho HTTP
 - [x] **`X-Robots-Tag: noindex`** — é um sistema pessoal, não precisa aparecer no Google
 - [x] **Links externos** com `rel="noreferrer"`
 - [x] **Sem `dangerouslySetInnerHTML`** em lugar nenhum — todo texto que você digita é renderizado escapado pelo React
@@ -70,7 +71,9 @@ Se a chave `anon` vazar, não aconteceu nada — ela é servida para qualquer vi
 
 - [ ] Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` cadastradas em *Environment Variables* (não commitadas)
 - [ ] MFA ativado nas duas contas
-- [ ] Repositório **privado** — não porque tem segredo, mas porque não há motivo para ser público antes de estar pronto para portfólio
+- [ ] Repositório **público** (exigência do GitHub Pages gratuito). Sem problema de segurança: a chave anon é pública por design e o RLS protege os dados. Mas confira dois pontos:
+  - [ ] Nenhum `.env` commitado (`git ls-files | grep env` deve mostrar só `.env.example`)
+  - [ ] Email de commit privado: *GitHub → Settings → Emails → Keep my email addresses private*
 
 ## Sobre as dependências
 

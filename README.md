@@ -73,27 +73,57 @@ O checklist completo — o que já está feito no código e o que você precisa 
 
 Leia antes de publicar. O item mais importante: **crie sua conta antes de fechar o cadastro público**, ou você fica trancado do lado de fora.
 
-## Publicando na Vercel
+## Publicando no GitHub Pages
 
-O repositório já está inicializado com o primeiro commit feito. Falta apenas apontar para o seu GitHub:
+O workflow já está pronto em `.github/workflows/deploy.yml`. Ele builda e publica a cada push na `main`.
+
+**1. Suba o repositório** (público — o Pages gratuito não serve repositório privado):
 
 ```bash
 git remote add origin https://github.com/SEU-USUARIO/devpath.git; git push -u origin main
 ```
 
-1. Crie o repositório no GitHub (**privado**) e rode o comando acima. O `.env` está no `.gitignore` e **não** vai junto — é o comportamento correto.
-2. Em [vercel.com](https://vercel.com) → *Add New → Project* → importe o repositório.
-3. A Vercel detecta Vite sozinha. Confirme: build `npm run build`, output `dist`. O `vercel.json` já traz os headers de segurança (CSP, HSTS, `X-Frame-Options`) e o cache dos assets.
-4. Em **Environment Variables**, adicione `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` com os mesmos valores do `.env`.
-5. Deploy.
-6. Volte ao Supabase em **Authentication → URL Configuration** e coloque a URL da Vercel em *Site URL* — sem isso o link de recuperação de senha aponta para `localhost`.
+**2. Ative o Pages:** *Settings → Pages → Source: **GitHub Actions***.
 
-Cada `git push` na branch principal republica o site.
+**3. Cadastre as chaves:** *Settings → Secrets and variables → Actions → New repository secret*, uma de cada vez:
 
-### Notas sobre o plano gratuito
+| Nome | Valor |
+|---|---|
+| `VITE_SUPABASE_URL` | `https://SEU-PROJETO.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | sua chave **anon / public** |
 
-- Projeto Supabase gratuito **pausa após ~1 semana sem acesso**. É só despausar com um clique no painel.
-- O roteamento usa `HashRouter` (URLs com `#/roadmap`), então nenhuma configuração de *rewrite* é necessária em qualquer host estático.
+Sem esses secrets o site sobe, mas em **modo local**: sem login e sem sincronização. O workflow avisa isso no log.
+
+**4. Empurre qualquer commit** (ou rode o workflow na mão pela aba *Actions*). A URL final é `https://SEU-USUARIO.github.io/devpath/`.
+
+**5. No Supabase**, em *Authentication → URL Configuration*, coloque essa URL em **Site URL** e em **Redirect URLs**. Sem isso o link de recuperação de senha aponta para `localhost`.
+
+### O que o Pages não faz
+
+O GitHub Pages não permite cabeçalhos HTTP próprios. Consequências reais:
+
+- **HSTS** não se aplica (o Pages já força HTTPS, então o impacto é pequeno)
+- **`frame-ancestors`** não se aplica — o site pode ser embutido em iframe por terceiros (clickjacking)
+
+O que dá para cobrir por `<meta>` já está no `index.html`: CSP de scripts, estilos, imagens e conexões. Se um dia isso incomodar, o `vercel.json` deste repositório já aplica tudo — é só importar o projeto na Vercel sem mudar nada no código.
+
+### Repositório público: o que muda
+
+- Todo o código fica visível. **Isso é uma vantagem**: vira portfólio. Um sistema real, usado por você, com autenticação, RLS, CI e deploy — vale mais numa entrevista que dez projetos de tutorial.
+- A chave `anon` aparece no JavaScript publicado. **Correto e esperado** — ela é pública por design, e quem protege os dados é o RLS no banco.
+- Seu email de commit fica visível. Para esconder: *GitHub → Settings → Emails → Keep my email addresses private*, e depois `git config user.email SEU_ID+usuario@users.noreply.github.com`.
+- **Feche o cadastro no Supabase** depois de criar sua conta. Com a URL pública, qualquer pessoa que a encontre pode criar conta enquanto o signup estiver aberto.
+
+## Usando no celular
+
+O app é responsivo e pode ser instalado como aplicativo:
+
+- **Android (Chrome):** menu ⋮ → *Adicionar à tela inicial*
+- **iPhone (Safari):** botão compartilhar → *Adicionar à Tela de Início*
+
+Instalado, ele abre em tela cheia, sem barra de navegador. O progresso é o mesmo do computador — é a mesma conta.
+
+Uma limitação honesta do iPhone: as **notificações do Pomodoro** só funcionam com o app adicionado à tela de início, e ainda assim o iOS é restritivo. O alarme sonoro funciona nos dois sistemas, desde que a aba esteja aberta.
 
 ## Como a sincronização funciona
 
@@ -145,6 +175,15 @@ no objeto `OBJETIVOS`.
 
 `Configurações → Exportar progresso` gera um `.json`. Em modo nuvem isso é opcional (o banco já é o backup),
 mas continua útil para guardar um ponto no tempo ou levar o progresso para outra conta.
+
+## Alternativa: Vercel ou Netlify
+
+Se um dia quiser repositório privado ou os cabeçalhos de segurança completos, o `vercel.json` já está pronto:
+importe o repositório em [vercel.com](https://vercel.com), cadastre as duas variáveis em *Environment Variables*
+e faça o deploy. Nada muda no código — o `VITE_BASE` só é usado pelo workflow do Pages.
+
+> ⚠️ Variáveis `VITE_` são embutidas **no build**. Se você adicioná-las depois do primeiro deploy, precisa
+> mandar um *Redeploy*, senão o site continua em modo local.
 
 ## Próximo passo planejado
 
