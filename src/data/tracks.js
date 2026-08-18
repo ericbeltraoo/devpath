@@ -57,6 +57,7 @@ export const TRILHAS = [
             id: 'base-f1-m2',
             titulo: 'Git e GitHub de verdade',
             horas: 12,
+            curso: { secao: 19, nome: 'Git e GitHub' },
             topicos: [
               'Os 3 estados: working directory, staging area, repositorio',
               'init, add, commit, status, log, diff',
@@ -248,6 +249,7 @@ export const TRILHAS = [
             id: 'java-f1-m1',
             titulo: 'Sintaxe, tipos e operadores',
             horas: 10,
+            curso: { secao: 4, nome: 'Estrutura sequencial' },
             topicos: [
               'JDK, JRE, JVM e bytecode — o que cada um faz',
               'Tipos primitivos e wrappers (int vs Integer, autoboxing)',
@@ -266,6 +268,7 @@ export const TRILHAS = [
             id: 'java-f1-m2',
             titulo: 'Estruturas de controle',
             horas: 10,
+            curso: { secao: 6, nome: 'Estrutura condicional e repetitiva' },
             topicos: [
               'if / else if / else e operador ternario',
               'switch tradicional e switch expression (Java 14+)',
@@ -281,6 +284,7 @@ export const TRILHAS = [
             id: 'java-f1-m3',
             titulo: 'Arrays e Strings',
             horas: 8,
+            curso: { secao: 10, nome: 'Memória, arrays e listas' },
             topicos: [
               'Array unidimensional e matriz',
               'Percorrer, somar, achar maior/menor, media',
@@ -296,7 +300,10 @@ export const TRILHAS = [
             titulo: 'Data e hora (java.time)',
             horas: 8,
             // Ponto confirmado por ele em 18/08/2026: aula 121 do curso.
-            marcoAtual: { aula: 121, nome: 'Calculos com data-hora' },
+            curso: { secao: 11, nome: 'Data-hora' },
+            // Aula 121 de 408. Dentro da secao 11 (13 aulas), ele esta na 10a:
+            // faltam so as tres de Date/Calendar, que sao legado.
+            marcoAtual: { aula: 121, nome: 'Calculos com data-hora', secao: 11, restamNaSecao: 3 },
             topicos: [
               'LocalDate, LocalTime, LocalDateTime — data sem fuso',
               'Instant — instante global (UTC), o tipo certo para gravar no banco',
@@ -443,6 +450,7 @@ java.util.Date legado = java.util.Date.from(Instant.now());`,
             id: 'java-f1-m5',
             titulo: 'Metodos e boas praticas iniciais',
             horas: 6,
+            curso: { secao: 7, nome: 'Tópicos especiais (funções)' },
             topicos: [
               'Assinatura de metodo, parametros, retorno',
               'Passagem por valor (e o que isso significa para objetos)',
@@ -464,6 +472,7 @@ java.util.Date legado = java.util.Date.from(Instant.now());`,
             id: 'java-f2-m1',
             titulo: 'Classes, objetos e encapsulamento',
             horas: 12,
+            curso: { secao: 9, nome: 'Construtores e encapsulamento' },
             topicos: [
               'Classe vs objeto vs instancia',
               'Atributos, metodos, construtores e sobrecarga de construtor',
@@ -604,9 +613,86 @@ System.out.println(equipe.size());   // 2 — e deveria ser 1`,
             recursos: [],
           },
           {
+            id: 'java-f2-m6',
+            titulo: 'Enumeracoes e composicao',
+            horas: 8,
+            curso: { secao: 12, nome: 'Enumerações e composição' },
+            topicos: [
+              'enum: conjunto fechado de valores, com nome e seguranca de tipo',
+              'Por que enum e melhor que String ou int magico para status',
+              'enum com atributos e metodos proprios',
+              'valueOf, values() e switch sobre enum',
+              'Composicao: objeto que TEM outro objeto',
+              'Composicao vs heranca — a decisao mais importante de design em POO',
+              'Relacao "tem-um" e delegacao de responsabilidade',
+              'StringBuilder e por que concatenar em laco e caro',
+            ],
+            entregavel:
+              'Refatorar um status representado por String em um enum com comportamento proprio, sem nenhum if de comparacao textual.',
+            licoes: [
+              {
+                titulo: 'enum existe para eliminar a String magica',
+                explicacao:
+                  'Representar status como String parece simples e e uma fonte inesgotavel de bug: "APROVADO", "Aprovado" e "aprovdo" sao valores validos para o compilador e desastrosos em producao. O enum fecha o conjunto: so existem os valores que voce declarou, o compilador confere, a IDE autocompleta e o switch avisa se voce esqueceu um caso. Em Java o enum ainda pode ter atributo e metodo — entao a regra de cada status mora dentro do proprio status, em vez de espalhada em ifs.',
+                codigo: `// FRAGIL — o compilador nao ajuda em nada
+pedido.setStatus("AGUARDANDO_PAGAMENTO");
+if (pedido.getStatus().equals("aguardando_pagamento")) { ... }  // nunca entra
+
+// SEGURO — conjunto fechado, com comportamento proprio
+public enum StatusPedido {
+    AGUARDANDO_PAGAMENTO(false),
+    PAGO(true),
+    ENVIADO(true),
+    CANCELADO(false);
+
+    private final boolean podeSerEnviado;
+
+    StatusPedido(boolean podeSerEnviado) {
+        this.podeSerEnviado = podeSerEnviado;
+    }
+
+    public boolean podeSerEnviado() { return podeSerEnviado; }
+}
+
+// O if de regra desaparece
+if (pedido.getStatus().podeSerEnviado()) { ... }`,
+                erroComum:
+                  'Guardar o enum no banco pelo ordinal() (a posicao). Se voce inserir um valor novo no meio da lista, todos os registros antigos passam a significar outra coisa. Persista pelo NOME.',
+                pergunta:
+                  'Seu sistema de locadora tem tipos de veiculo. enum ou hierarquia de classes? Justifique — e note que a resposta muda se cada tipo tiver comportamento diferente.',
+              },
+              {
+                titulo: 'Composicao vs heranca: prefira ter a ser',
+                explicacao:
+                  'Heranca cria acoplamento permanente: a subclasse herda TUDO, inclusive o que nao faz sentido para ela, e voce so pode herdar de uma classe. Composicao e ter um objeto como atributo e delegar o trabalho a ele — mais flexivel, trocavel em tempo de execucao e testavel isoladamente. A pergunta que decide: a relacao e honestamente "e-um" ou e "tem-um"? Um Funcionario TEM um Departamento, nao E um Departamento. Um Gerente E um Funcionario. Na duvida, componha: e mais facil trocar composicao por heranca depois do que o contrario.',
+                codigo: `// HERANCA — "e-um". So use quando for verdade de verdade.
+public class Gerente extends Funcionario { ... }
+
+// COMPOSICAO — "tem-um". O caso mais comum.
+public class Funcionario {
+    private String nome;
+    private Departamento departamento;   // TEM um
+    private List<Contrato> contratos;    // TEM varios
+
+    public BigDecimal salarioTotal() {
+        return contratos.stream()
+                        .map(Contrato::valor)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);  // delega
+    }
+}`,
+                erroComum:
+                  'Usar heranca so para reaproveitar um metodo. Se a frase "X e um Y" soa estranha em voz alta, e composicao.',
+                pergunta:
+                  'No projeto de locadora: Locacao TEM um Veiculo ou E um Veiculo? E Contrato e Locacao, qual a relacao?',
+              },
+            ],
+            recursos: [],
+          },
+          {
             id: 'java-f2-m2',
             titulo: 'Heranca, polimorfismo e abstracao',
             horas: 12,
+            curso: { secao: 13, nome: 'Herança e polimorfismo' },
             topicos: [
               'extends e reuso de comportamento',
               'super — construtor e metodo da superclasse',
@@ -746,6 +832,7 @@ for (Veiculo v : frota) {
             id: 'java-f2-m3',
             titulo: 'Excecoes',
             horas: 8,
+            curso: { secao: 14, nome: 'Tratamento de exceções' },
             topicos: [
               'try / catch / finally e try-with-resources',
               'Checked vs unchecked exception',
@@ -760,9 +847,115 @@ for (Veiculo v : frota) {
             ],
           },
           {
+            id: 'java-f2-m8',
+            titulo: 'Arquivos e I/O',
+            horas: 8,
+            curso: { secao: 15, nome: 'Trabalhando com arquivos' },
+            topicos: [
+              'File e Scanner para leitura simples',
+              'FileReader e BufferedReader — por que o buffer importa',
+              'try-with-resources: fechar recurso sem finally',
+              'FileWriter e BufferedWriter, modo append',
+              'Manipular pastas com File',
+              'Caminhos: absoluto, relativo e separador por sistema operacional',
+              'Ler arquivo grande sem carregar tudo na memoria (Files.lines)',
+              'Tratamento de IOException',
+            ],
+            entregavel:
+              'Programa que le um CSV de 100 mil linhas, filtra e grava outro arquivo, com uso de memoria estavel.',
+            licoes: [
+              {
+                titulo: 'try-with-resources: o vazamento que voce nao ve',
+                explicacao:
+                  'Todo recurso de arquivo, rede ou banco precisa ser fechado. Se voce esquecer, o descritor fica aberto; num programa de console isso passa despercebido, num servidor rodando dias significa "too many open files" e a aplicacao inteira para de aceitar conexao. O try-with-resources fecha automaticamente, na ordem inversa da abertura, mesmo se uma excecao for lancada no meio. E o padrao desde o Java 7 — escrever close() dentro de finally hoje e sinal de codigo velho.',
+                codigo: `// ANTIGO — verboso e facil de errar
+BufferedReader br = null;
+try {
+    br = new BufferedReader(new FileReader("dados.csv"));
+    ...
+} catch (IOException e) {
+    ...
+} finally {
+    if (br != null) try { br.close(); } catch (IOException e) {}  // feio
+}
+
+// MODERNO — fecha sozinho, inclusive se der excecao
+try (BufferedReader br = new BufferedReader(new FileReader("dados.csv"))) {
+    String linha;
+    while ((linha = br.readLine()) != null) {
+        processar(linha);
+    }
+} catch (IOException e) {
+    throw new LeituraArquivoException("Falha ao ler dados.csv", e);
+}
+
+// Arquivo GRANDE: Stream nao carrega tudo na memoria
+try (Stream<String> linhas = Files.lines(Path.of("enorme.csv"))) {
+    linhas.filter(l -> !l.isBlank()).forEach(this::processar);
+}`,
+                erroComum:
+                  'Files.readAllLines() num arquivo de 1 GB. Carrega tudo na memoria e derruba a aplicacao. Use Files.lines() dentro de try-with-resources.',
+                pergunta:
+                  'Por que Files.lines() precisa estar dentro de try-with-resources, se Stream parece nao ter nada a fechar?',
+              },
+            ],
+            recursos: [],
+          },
+          {
+            id: 'java-f2-m7',
+            titulo: 'Interfaces e contratos',
+            horas: 12,
+            curso: { secao: 16, nome: 'Interfaces' },
+            topicos: [
+              'Interface como contrato: o que a classe SABE FAZER',
+              'Herdar vs cumprir contrato — a distincao central deste capitulo',
+              'Heranca multipla de interface e o problema do diamante',
+              'Inversao de controle e injecao de dependencia (a base do Spring)',
+              'Interface Comparable e ordenacao natural',
+              'Comparator para ordenacoes alternativas',
+              'Default methods e por que eles existem',
+              'Programar para a interface, nao para a implementacao',
+            ],
+            entregavel:
+              'Trocar a implementacao de um servico (ex.: gravar em arquivo por gravar em memoria) sem alterar UMA linha da classe que o usa.',
+            licoes: [
+              {
+                titulo: 'Injecao de dependencia comeca aqui, nao no Spring',
+                explicacao:
+                  'Este e o capitulo mais importante do curso inteiro para quem vai usar Spring depois. Quando uma classe da new na propria dependencia, ela fica presa aquela implementacao: nao da para trocar e nao da para testar sem tocar no banco de verdade. Quando ela recebe a dependencia pronta pelo construtor, tipada como INTERFACE, voce troca a implementacao de fora. O Spring nao inventou isso — ele so automatiza o que voce vai fazer aqui na mao. Se voce entender neste capitulo, @Autowired vira obvio; se nao entender, Spring vira magica.',
+                codigo: `// ACOPLADO — impossivel testar sem banco
+public class ServicoPedido {
+    private PedidoDaoJDBC dao = new PedidoDaoJDBC();  // preso ao JDBC
+}
+
+// INVERTIDO — recebe de fora, tipado pela interface
+public class ServicoPedido {
+    private final PedidoDao dao;                      // contrato, nao implementacao
+
+    public ServicoPedido(PedidoDao dao) {             // injecao por construtor
+        this.dao = dao;
+    }
+}
+
+// Em producao
+new ServicoPedido(new PedidoDaoJDBC());
+// No teste — sem banco nenhum
+new ServicoPedido(new PedidoDaoEmMemoria());
+
+// E no Spring, mais tarde, e exatamente isto com @Autowired implicito`,
+                erroComum:
+                  'Tipar o atributo pela classe concreta em vez da interface. Voce perde toda a flexibilidade e o teste volta a exigir banco.',
+                pergunta:
+                  'Por que injetar por CONSTRUTOR e melhor que por campo? Pense em qual das duas formas permite marcar o atributo como final.',
+              },
+            ],
+            recursos: [],
+          },
+          {
             id: 'java-f2-m4',
             titulo: 'Collections e Generics',
             horas: 12,
+            curso: { secao: 17, nome: 'Generics, Set, Map' },
             topicos: [
               'Generics: <T>, por que existe, type erasure (nocao)',
               'List: ArrayList vs LinkedList',
@@ -780,6 +973,7 @@ for (Veiculo v : frota) {
             id: 'java-f2-m5',
             titulo: 'Lambdas, Streams e Optional',
             horas: 10,
+            curso: { secao: 18, nome: 'Programação funcional e lambda' },
             topicos: [
               'Interface funcional e @FunctionalInterface',
               'Sintaxe lambda e method reference (::)',
@@ -806,6 +1000,7 @@ for (Veiculo v : frota) {
             id: 'java-f3-m1',
             titulo: 'Maven e estrutura de projeto',
             horas: 6,
+            curso: { secao: 21, nome: 'JPA/Hibernate — Maven' },
             topicos: [
               'pom.xml: groupId, artifactId, version',
               'Dependencias e escopos (compile, test, provided)',
@@ -840,6 +1035,7 @@ for (Veiculo v : frota) {
             id: 'java-f3-m3',
             titulo: 'JDBC e JPA/Hibernate',
             horas: 14,
+            curso: { secao: 20, nome: 'JDBC e JPA/Hibernate' },
             topicos: [
               'JDBC puro: Connection, PreparedStatement, ResultSet (entender o que o JPA esconde)',
               'SQL Injection e por que PreparedStatement resolve',
@@ -867,6 +1063,7 @@ for (Veiculo v : frota) {
             id: 'java-f4-m1',
             titulo: 'Fundamentos do Spring',
             horas: 10,
+            curso: { secao: 22, nome: 'Spring Boot' },
             topicos: [
               'Inversao de Controle e Injecao de Dependencia',
               'Container e ciclo de vida do bean',
@@ -887,6 +1084,7 @@ for (Veiculo v : frota) {
             id: 'java-f4-m2',
             titulo: 'API REST em camadas',
             horas: 14,
+            curso: { secao: 22, nome: 'Spring Boot — web services' },
             topicos: [
               'Arquitetura: Controller -> Service -> Repository',
               '@RestController, @RequestMapping, @GetMapping, @PostMapping...',
@@ -908,6 +1106,7 @@ for (Veiculo v : frota) {
             id: 'java-f4-m3',
             titulo: 'Spring Data JPA',
             horas: 8,
+            curso: { secao: 22, nome: 'Spring Data JPA' },
             topicos: [
               'JpaRepository e os metodos que voce ganha de graca',
               'Query methods por nome (findByNomeContainingIgnoreCase)',
@@ -995,6 +1194,27 @@ for (Veiculo v : frota) {
             recursos: [
               { tipo: 'doc', titulo: 'GitHub Actions — docs', url: 'https://docs.github.com/pt/actions' },
             ],
+          },
+          {
+            id: 'java-f5-m4',
+            titulo: 'JavaFX — interface grafica desktop (opcional)',
+            horas: 30,
+            curso: { secao: 25, nome: 'JavaFX' },
+            opcional: true,
+            topicos: [
+              'Visao geral do JavaFX e Scene Builder',
+              'FXML e separacao entre tela e codigo',
+              'Tratamento de eventos e Initializable',
+              'Controles: TextField, Label, ComboBox, DatePicker, TableView',
+              'Containers de layout',
+              'Arquitetura MVC aplicada a desktop',
+              'Padrao Observer para atualizar a tela',
+              'Dialog, validacao de dados e ValidationException',
+              'CRUD completo ligado ao banco',
+              'Build e distribuicao da aplicacao',
+            ],
+            entregavel: 'CRUD desktop de departamentos e vendedores, com validacao e dialog.',
+            recursos: [],
           },
           {
             id: 'java-f5-m3',
@@ -1241,6 +1461,7 @@ for (Veiculo v : frota) {
             id: 'db-f1-m2',
             titulo: 'SQL — DDL e DML',
             horas: 12,
+            curso: { secao: 20, nome: 'Nivelamento SQL (dentro de JDBC)' },
             topicos: [
               'CREATE / ALTER / DROP TABLE, constraints (NOT NULL, UNIQUE, CHECK, DEFAULT)',
               'INSERT, UPDATE, DELETE (e o perigo do WHERE esquecido)',
@@ -1335,6 +1556,25 @@ for (Veiculo v : frota) {
               'Por que cache resolve e por que cria bug de dado velho',
             ],
             entregavel: 'Adicionar cache Redis a um endpoint da sua API e medir o ganho.',
+            recursos: [],
+          },
+          {
+            id: 'db-f2-m4',
+            titulo: 'MongoDB com Spring Boot',
+            horas: 12,
+            curso: { secao: 24, nome: 'Projeto MongoDB com Spring Boot' },
+            topicos: [
+              'Documento, colecao e a ausencia de schema fixo',
+              'Quando modelar aninhado e quando referenciar — a decisao central',
+              'Spring Data MongoDB: @Document, MongoRepository',
+              'CRUD completo com DTO',
+              'Objeto aninhado vs referencia por id (User dentro de Post)',
+              'Query methods e @Query no Mongo',
+              'Consulta com varios criterios',
+              'Por que NoSQL nao substitui relacional (e vice-versa)',
+            ],
+            entregavel:
+              'API de posts e comentarios no MongoDB, com autor aninhado por projecao e consulta por multiplos criterios.',
             recursos: [],
           },
         ],

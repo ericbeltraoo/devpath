@@ -651,6 +651,38 @@ export const EXERCICIOS = [
     dicas: ['Ligue spring.jpa.show-sql e conte as queries. Se uma listagem de 20 itens dispara 21 queries, achou.'],
   },
   {
+    id: 'ex-cum-06',
+    trilha: 'java',
+    titulo: 'CUMULATIVO 6 — Jogo de Xadrez (secao 23 do curso)',
+    nivel: 3,
+    tipo: 'cumulativo',
+    tempo: '20h',
+    tags: ['cumulativo', 'POO', 'projeto', 'nelio'],
+    revisa: ['java-f2-m1', 'java-f2-m2', 'java-f2-m3', 'java-f2-m4', 'java-f2-m6', 'java-f2-m7'],
+    enunciado:
+      'A secao 23 do curso (33 aulas) constroi um xadrez completo em console. E o maior consolidador de POO do curso inteiro: se voce conseguir acompanhar sem travar, sua base de orientacao a objetos esta de pe. Se travar, voce achou exatamente o que revisar.',
+    requisitos: [
+      'Camadas separadas: boardgame (generico) e chess (regras do xadrez)',
+      'Position, Board, Piece — heranca e abstracao de verdade',
+      'Programacao defensiva com BoardException e ChessException',
+      'Matriz de movimentos possiveis por peca (polimorfismo puro)',
+      'Todas as pecas: Torre, Rei, Peao, Bispo, Cavalo, Rainha',
+      'Xeque e xeque-mate',
+      'Jogadas especiais: roque, en passant e promocao',
+    ],
+    criteriosAceite: [
+      'Adicionar uma peca nova nao exige tocar na classe do tabuleiro',
+      'Nenhum instanceof para decidir movimento',
+      'Excecao de dominio, nunca mensagem de erro solta no console',
+      'Voce consegue explicar por que boardgame nao conhece chess, e nao o contrario',
+    ],
+    dicas: [
+      'Nao assista as 33 aulas seguidas copiando. Pause a cada peca e tente implementar a proxima ANTES de ver a solucao.',
+      'Se voce copiar o projeto inteiro sem travar em nada, provavelmente nao aprendeu — travar aqui e o sinal de que esta funcionando.',
+      'Este projeto sozinho ja e material de entrevista: "me conte um projeto que te deu trabalho".',
+    ],
+  },
+  {
     id: 'ex-cum-05',
     trilha: 'base',
     titulo: 'CUMULATIVO 5 — Explique seu proprio codigo',
