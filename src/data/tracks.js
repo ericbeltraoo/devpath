@@ -5,7 +5,11 @@
 //   trilha  -> fases -> modulos -> topicos (unidade minima marcavel)
 //
 // Cada modulo tem:
-//   id         identificador estavel (NAO renomear: e a chave do progresso salvo)
+//   id         identificador estavel (NAO renomear: e a chave do progresso salvo).
+//              ATENCAO: na trilha Java o prefixo do id NAO reflete mais a fase.
+//              java-f1-m3 (arrays) e java-f1-m4 (data-hora) vivem na fase 2,
+//              porque o curso ensina classes ANTES de arrays. Renomear os ids
+//              apagaria o progresso de quem ja marcou esses topicos.
 //   titulo     nome do modulo
 //   horas      estimativa de horas de estudo focado
 //   topicos    lista de itens marcaveis
@@ -242,8 +246,9 @@ export const TRILHAS = [
     fases: [
       {
         id: 'java-f1',
-        nome: 'Fundamentos da linguagem',
-        objetivo: 'Sintaxe, tipos e estruturas de controle no automatico.',
+        nome: 'Fundamentos da linguagem (seções 3–7)',
+        objetivo:
+          'Sintaxe, controle de fluxo e funções — antes de qualquer objeto, como no curso.',
         modulos: [
           {
             id: 'java-f1-m1',
@@ -278,6 +283,174 @@ export const TRILHAS = [
               'Debug de laco no IntelliJ',
             ],
             entregavel: 'Menu de console em loop com 5 opcoes, validando entrada invalida sem quebrar.',
+            recursos: [],
+          },
+          {
+            id: 'java-f1-m5',
+            titulo: 'Metodos e boas praticas iniciais',
+            horas: 6,
+            curso: { secao: 7, nome: 'Tópicos especiais (funções)' },
+            topicos: [
+              'Assinatura de metodo, parametros, retorno',
+              'Passagem por valor (e o que isso significa para objetos)',
+              'Sobrecarga (overload)',
+              'Metodos static vs de instancia',
+              'Quebrar um main gigante em metodos com nome',
+            ],
+            entregavel: 'Refatorar a calculadora do modulo 1 para que o main tenha no maximo 15 linhas.',
+            recursos: [],
+          },
+        
+        ],
+      },
+      {
+        id: 'java-f2',
+        nome: 'Orientação a Objetos e coleções (seções 8–18)',
+        objetivo:
+          'O bloco central do curso. Classes primeiro, e só depois arrays, data-hora e o resto — nesta ordem, porque é a ordem em que o Nélio ensina.',
+        modulos: [
+          {
+            id: 'java-f2-m1',
+            titulo: 'Classes, objetos e encapsulamento',
+            horas: 12,
+            curso: { secao: 9, nome: 'Construtores e encapsulamento' },
+            topicos: [
+              'Classe vs objeto vs instancia',
+              'Atributos, metodos, construtores e sobrecarga de construtor',
+              'this — referencia a propria instancia',
+              'Modificadores: private, protected, public, default',
+              'Getters e setters — e quando NAO criar',
+              'Membros static e constantes (static final)',
+              'toString, equals e hashCode (o contrato entre eles)',
+              'Composicao — objeto que tem outro objeto',
+            ],
+            entregavel: 'Modelar um sistema de aluguel de veiculos com 4 classes que se relacionam.',
+            licoes: [
+              {
+                titulo: 'Encapsulamento nao e "criar getter e setter para tudo"',
+                explicacao:
+                  'A maioria aprende encapsulamento como um ritual: deixe o campo private e gere getter e setter para cada um. Isso nao encapsula nada — e o mesmo campo publico, so que com mais linhas. Encapsular e proteger o INVARIANTE: a regra que precisa ser verdade o tempo todo. Se saldo nunca pode ficar negativo, entao nao existe setSaldo; existe sacar() e depositar(), que validam. O setter so deve existir quando alterar aquele campo isoladamente e uma operacao legitima do dominio. Pergunte sempre: "que regra eu quebro se alguem mudar isso direto?" Se existe regra, nao ha setter.',
+                codigo: `// ANEMICO — parece encapsulado, nao esta
+public class Conta {
+    private BigDecimal saldo;
+    public void setSaldo(BigDecimal s) { this.saldo = s; }  // saldo -500? tudo bem
+    public BigDecimal getSaldo() { return saldo; }
+}
+
+// ENCAPSULADO — a classe protege a propria regra
+public class Conta {
+    private BigDecimal saldo;
+
+    public void depositar(BigDecimal valor) {
+        if (valor.compareTo(BigDecimal.ZERO) <= 0)
+            throw new IllegalArgumentException("Deposito deve ser positivo");
+        saldo = saldo.add(valor);
+    }
+
+    public void sacar(BigDecimal valor) {
+        if (valor.compareTo(saldo) > 0)
+            throw new SaldoInsuficienteException(numero, valor, saldo);
+        saldo = saldo.subtract(valor);
+    }
+
+    public BigDecimal getSaldo() { return saldo; }  // ler tudo bem; escrever nao
+}`,
+                erroComum:
+                  'Gerar getter e setter automaticamente pela IDE para todos os campos. Voce acabou de expor o estado inteiro e a classe virou um saco de dados — o que se chama de modelo anemico.',
+                pergunta:
+                  'Na sua classe Funcionario, quais campos NAO deveriam ter setter? Justifique cada um pela regra que ele protege.',
+              },
+              {
+                titulo: 'Construtor: o momento em que o objeto nasce valido',
+                explicacao:
+                  'O construtor tem uma responsabilidade que nenhum outro metodo tem: garantir que nao existe objeto invalido no sistema. Se uma Conta precisa de titular, o construtor exige titular — assim nao existe Conta sem dono em lugar nenhum do codigo. Isso elimina uma classe inteira de bug: o "objeto meio construido", aquele que passou pelo new mas ainda nao foi preenchido. Sobrecarga de construtor serve para oferecer atalhos, mas todos devem convergir para um construtor principal com this(...), para a validacao viver num lugar so.',
+                codigo: `public class Funcionario {
+    private final String matricula;   // final: definido no nascimento, nunca muda
+    private final String nome;
+    private Cargo cargo;
+
+    // Construtor principal: unico lugar com validacao
+    public Funcionario(String matricula, String nome, Cargo cargo) {
+        if (matricula == null || matricula.isBlank())
+            throw new IllegalArgumentException("Matricula obrigatoria");
+        if (nome == null || nome.isBlank())
+            throw new IllegalArgumentException("Nome obrigatorio");
+        this.matricula = matricula;
+        this.nome = nome;
+        this.cargo = Objects.requireNonNull(cargo, "Cargo obrigatorio");
+    }
+
+    // Atalho: delega, nao duplica a validacao
+    public Funcionario(String matricula, String nome) {
+        this(matricula, nome, Cargo.ANALISTA);
+    }
+}`,
+                erroComum:
+                  'Deixar o construtor vazio e preencher com setters depois. Entre o new e o ultimo setter existe um objeto invalido circulando — e alguem vai usa-lo nesse estado.',
+                pergunta:
+                  'Por que "final" na matricula ajuda a proteger o invariante? O que ele impede que aconteca?',
+              },
+              {
+                titulo: 'equals, hashCode e o contrato que quebra HashMap em silencio',
+                explicacao:
+                  'Por padrao, equals compara referencia: dois objetos com exatamente os mesmos dados sao "diferentes". Voce sobrescreve equals para dizer o que torna dois objetos o mesmo no seu dominio — normalmente a identidade de negocio, como a matricula do funcionario ou o numero da conta. Mas existe um contrato: se a.equals(b) e verdadeiro, entao a.hashCode() == b.hashCode() obrigatoriamente. HashMap e HashSet primeiro calculam o hash para achar o balde, e so depois usam equals. Se voce sobrescreve so o equals, o objeto vai parar em baldes diferentes e o Set aceita duplicata sem reclamar. Nao lanca erro, nao aparece no teste simples — voce descobre em producao.',
+                codigo: `public class Funcionario {
+    private final String matricula;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Funcionario outro = (Funcionario) o;
+        return matricula.equals(outro.matricula);   // identidade de negocio
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(matricula);             // MESMO campo do equals
+    }
+}
+
+// Sem o hashCode acima, isto falha silenciosamente:
+Set<Funcionario> equipe = new HashSet<>();
+equipe.add(new Funcionario("123", "Ana"));
+equipe.add(new Funcionario("123", "Ana"));
+System.out.println(equipe.size());   // 2 — e deveria ser 1`,
+                erroComum:
+                  'Usar campos mutaveis no hashCode. Se voce muda esse campo depois de por o objeto num HashSet, o hash muda de lugar e o objeto some da colecao — ele esta la, mas contains() devolve false.',
+                pergunta:
+                  'Por que usar TODOS os campos no equals costuma ser errado? Pense em dois registros do mesmo funcionario com o cargo atualizado.',
+              },
+              {
+                titulo: 'static: pertence a classe, nao ao objeto',
+                explicacao:
+                  'Um membro static existe uma vez so, compartilhado por todas as instancias — e existe mesmo sem nenhuma instancia. Serve para tres coisas: constantes (static final), metodos utilitarios sem estado (Math.max) e contadores da classe inteira. Serve mal para quase todo o resto. O erro classico e usar static como atalho para "acessar de qualquer lugar", o que cria estado global: dois pontos do codigo alterando o mesmo dado sem se conhecer, impossivel de testar isoladamente e quebrado sob concorrencia. Se voce esta pondo static so para nao precisar passar o objeto, pare — passe o objeto.',
+                codigo: `public class Funcionario {
+    // Constante: um valor so, imutavel, para todos
+    public static final int HORAS_SEMANAIS_PADRAO = 44;
+
+    // Contador da classe: quantos ja foram criados
+    private static int totalCriados = 0;
+
+    private final String matricula;   // de instancia: cada um tem o seu
+
+    public Funcionario(String matricula) {
+        this.matricula = matricula;
+        totalCriados++;               // afeta a classe inteira
+    }
+
+    // Metodo static: nao depende de nenhuma instancia
+    public static int getTotalCriados() { return totalCriados; }
+
+    // Isto NAO compila: metodo static nao enxerga campo de instancia
+    // public static String pegarMatricula() { return matricula; }
+}`,
+                erroComum:
+                  'Guardar estado de negocio em campo static "para facilitar o acesso". Vira variavel global: qualquer parte do sistema altera, ninguem sabe quem alterou, e o teste seguinte herda a sujeira do anterior.',
+                pergunta:
+                  'Por que um metodo static nao consegue acessar um campo de instancia? Responda pensando em QUANDO cada um passa a existir.',
+              },
+            ],
             recursos: [],
           },
           {
@@ -445,172 +618,6 @@ java.util.Date legado = java.util.Date.from(Instant.now());`,
               { tipo: 'doc', titulo: 'java.time — javadoc oficial', url: 'https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/package-summary.html' },
               { tipo: 'artigo', titulo: 'Baeldung — Introduction to Java 8 Date/Time API', url: 'https://www.baeldung.com/java-8-date-time-intro' },
             ],
-          },
-          {
-            id: 'java-f1-m5',
-            titulo: 'Metodos e boas praticas iniciais',
-            horas: 6,
-            curso: { secao: 7, nome: 'Tópicos especiais (funções)' },
-            topicos: [
-              'Assinatura de metodo, parametros, retorno',
-              'Passagem por valor (e o que isso significa para objetos)',
-              'Sobrecarga (overload)',
-              'Metodos static vs de instancia',
-              'Quebrar um main gigante em metodos com nome',
-            ],
-            entregavel: 'Refatorar a calculadora do modulo 1 para que o main tenha no maximo 15 linhas.',
-            recursos: [],
-          },
-        ],
-      },
-      {
-        id: 'java-f2',
-        nome: 'Orientacao a Objetos',
-        objetivo: 'O coracao do Java. Sem isso, Spring nao faz sentido.',
-        modulos: [
-          {
-            id: 'java-f2-m1',
-            titulo: 'Classes, objetos e encapsulamento',
-            horas: 12,
-            curso: { secao: 9, nome: 'Construtores e encapsulamento' },
-            topicos: [
-              'Classe vs objeto vs instancia',
-              'Atributos, metodos, construtores e sobrecarga de construtor',
-              'this — referencia a propria instancia',
-              'Modificadores: private, protected, public, default',
-              'Getters e setters — e quando NAO criar',
-              'Membros static e constantes (static final)',
-              'toString, equals e hashCode (o contrato entre eles)',
-              'Composicao — objeto que tem outro objeto',
-            ],
-            entregavel: 'Modelar um sistema de aluguel de veiculos com 4 classes que se relacionam.',
-            licoes: [
-              {
-                titulo: 'Encapsulamento nao e "criar getter e setter para tudo"',
-                explicacao:
-                  'A maioria aprende encapsulamento como um ritual: deixe o campo private e gere getter e setter para cada um. Isso nao encapsula nada — e o mesmo campo publico, so que com mais linhas. Encapsular e proteger o INVARIANTE: a regra que precisa ser verdade o tempo todo. Se saldo nunca pode ficar negativo, entao nao existe setSaldo; existe sacar() e depositar(), que validam. O setter so deve existir quando alterar aquele campo isoladamente e uma operacao legitima do dominio. Pergunte sempre: "que regra eu quebro se alguem mudar isso direto?" Se existe regra, nao ha setter.',
-                codigo: `// ANEMICO — parece encapsulado, nao esta
-public class Conta {
-    private BigDecimal saldo;
-    public void setSaldo(BigDecimal s) { this.saldo = s; }  // saldo -500? tudo bem
-    public BigDecimal getSaldo() { return saldo; }
-}
-
-// ENCAPSULADO — a classe protege a propria regra
-public class Conta {
-    private BigDecimal saldo;
-
-    public void depositar(BigDecimal valor) {
-        if (valor.compareTo(BigDecimal.ZERO) <= 0)
-            throw new IllegalArgumentException("Deposito deve ser positivo");
-        saldo = saldo.add(valor);
-    }
-
-    public void sacar(BigDecimal valor) {
-        if (valor.compareTo(saldo) > 0)
-            throw new SaldoInsuficienteException(numero, valor, saldo);
-        saldo = saldo.subtract(valor);
-    }
-
-    public BigDecimal getSaldo() { return saldo; }  // ler tudo bem; escrever nao
-}`,
-                erroComum:
-                  'Gerar getter e setter automaticamente pela IDE para todos os campos. Voce acabou de expor o estado inteiro e a classe virou um saco de dados — o que se chama de modelo anemico.',
-                pergunta:
-                  'Na sua classe Funcionario, quais campos NAO deveriam ter setter? Justifique cada um pela regra que ele protege.',
-              },
-              {
-                titulo: 'Construtor: o momento em que o objeto nasce valido',
-                explicacao:
-                  'O construtor tem uma responsabilidade que nenhum outro metodo tem: garantir que nao existe objeto invalido no sistema. Se uma Conta precisa de titular, o construtor exige titular — assim nao existe Conta sem dono em lugar nenhum do codigo. Isso elimina uma classe inteira de bug: o "objeto meio construido", aquele que passou pelo new mas ainda nao foi preenchido. Sobrecarga de construtor serve para oferecer atalhos, mas todos devem convergir para um construtor principal com this(...), para a validacao viver num lugar so.',
-                codigo: `public class Funcionario {
-    private final String matricula;   // final: definido no nascimento, nunca muda
-    private final String nome;
-    private Cargo cargo;
-
-    // Construtor principal: unico lugar com validacao
-    public Funcionario(String matricula, String nome, Cargo cargo) {
-        if (matricula == null || matricula.isBlank())
-            throw new IllegalArgumentException("Matricula obrigatoria");
-        if (nome == null || nome.isBlank())
-            throw new IllegalArgumentException("Nome obrigatorio");
-        this.matricula = matricula;
-        this.nome = nome;
-        this.cargo = Objects.requireNonNull(cargo, "Cargo obrigatorio");
-    }
-
-    // Atalho: delega, nao duplica a validacao
-    public Funcionario(String matricula, String nome) {
-        this(matricula, nome, Cargo.ANALISTA);
-    }
-}`,
-                erroComum:
-                  'Deixar o construtor vazio e preencher com setters depois. Entre o new e o ultimo setter existe um objeto invalido circulando — e alguem vai usa-lo nesse estado.',
-                pergunta:
-                  'Por que "final" na matricula ajuda a proteger o invariante? O que ele impede que aconteca?',
-              },
-              {
-                titulo: 'equals, hashCode e o contrato que quebra HashMap em silencio',
-                explicacao:
-                  'Por padrao, equals compara referencia: dois objetos com exatamente os mesmos dados sao "diferentes". Voce sobrescreve equals para dizer o que torna dois objetos o mesmo no seu dominio — normalmente a identidade de negocio, como a matricula do funcionario ou o numero da conta. Mas existe um contrato: se a.equals(b) e verdadeiro, entao a.hashCode() == b.hashCode() obrigatoriamente. HashMap e HashSet primeiro calculam o hash para achar o balde, e so depois usam equals. Se voce sobrescreve so o equals, o objeto vai parar em baldes diferentes e o Set aceita duplicata sem reclamar. Nao lanca erro, nao aparece no teste simples — voce descobre em producao.',
-                codigo: `public class Funcionario {
-    private final String matricula;
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Funcionario outro = (Funcionario) o;
-        return matricula.equals(outro.matricula);   // identidade de negocio
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(matricula);             // MESMO campo do equals
-    }
-}
-
-// Sem o hashCode acima, isto falha silenciosamente:
-Set<Funcionario> equipe = new HashSet<>();
-equipe.add(new Funcionario("123", "Ana"));
-equipe.add(new Funcionario("123", "Ana"));
-System.out.println(equipe.size());   // 2 — e deveria ser 1`,
-                erroComum:
-                  'Usar campos mutaveis no hashCode. Se voce muda esse campo depois de por o objeto num HashSet, o hash muda de lugar e o objeto some da colecao — ele esta la, mas contains() devolve false.',
-                pergunta:
-                  'Por que usar TODOS os campos no equals costuma ser errado? Pense em dois registros do mesmo funcionario com o cargo atualizado.',
-              },
-              {
-                titulo: 'static: pertence a classe, nao ao objeto',
-                explicacao:
-                  'Um membro static existe uma vez so, compartilhado por todas as instancias — e existe mesmo sem nenhuma instancia. Serve para tres coisas: constantes (static final), metodos utilitarios sem estado (Math.max) e contadores da classe inteira. Serve mal para quase todo o resto. O erro classico e usar static como atalho para "acessar de qualquer lugar", o que cria estado global: dois pontos do codigo alterando o mesmo dado sem se conhecer, impossivel de testar isoladamente e quebrado sob concorrencia. Se voce esta pondo static so para nao precisar passar o objeto, pare — passe o objeto.',
-                codigo: `public class Funcionario {
-    // Constante: um valor so, imutavel, para todos
-    public static final int HORAS_SEMANAIS_PADRAO = 44;
-
-    // Contador da classe: quantos ja foram criados
-    private static int totalCriados = 0;
-
-    private final String matricula;   // de instancia: cada um tem o seu
-
-    public Funcionario(String matricula) {
-        this.matricula = matricula;
-        totalCriados++;               // afeta a classe inteira
-    }
-
-    // Metodo static: nao depende de nenhuma instancia
-    public static int getTotalCriados() { return totalCriados; }
-
-    // Isto NAO compila: metodo static nao enxerga campo de instancia
-    // public static String pegarMatricula() { return matricula; }
-}`,
-                erroComum:
-                  'Guardar estado de negocio em campo static "para facilitar o acesso". Vira variavel global: qualquer parte do sistema altera, ninguem sabe quem alterou, e o teste seguinte herda a sujeira do anterior.',
-                pergunta:
-                  'Por que um metodo static nao consegue acessar um campo de instancia? Responda pensando em QUANDO cada um passa a existir.',
-              },
-            ],
-            recursos: [],
           },
           {
             id: 'java-f2-m6',
@@ -989,13 +996,36 @@ new ServicoPedido(new PedidoDaoEmMemoria());
               { tipo: 'artigo', titulo: 'Baeldung — Java 8 Streams', url: 'https://www.baeldung.com/java-8-streams' },
             ],
           },
+        
         ],
       },
       {
         id: 'java-f3',
-        nome: 'Java profissional',
-        objetivo: 'Sair do "programa de console" e entrar no ecossistema real.',
+        nome: 'Ferramentas e acesso a dados (seções 20–21)',
+        objetivo:
+          'Maven, JDBC e JPA/Hibernate. Testes entram aqui — o curso não ensina, o mercado cobra.',
         modulos: [
+          {
+            id: 'java-f3-m3',
+            titulo: 'JDBC e JPA/Hibernate',
+            horas: 14,
+            curso: { secao: 20, nome: 'JDBC e JPA/Hibernate' },
+            topicos: [
+              'JDBC puro: Connection, PreparedStatement, ResultSet (entender o que o JPA esconde)',
+              'SQL Injection e por que PreparedStatement resolve',
+              'ORM: mapear classe para tabela',
+              '@Entity, @Table, @Id, @GeneratedValue, @Column',
+              'Relacionamentos: @OneToMany, @ManyToOne, @ManyToMany, @OneToOne',
+              'Lazy vs Eager e o problema N+1',
+              'Cascade e orphanRemoval',
+              'JPQL basico',
+              'Transacoes e @Transactional',
+            ],
+            entregavel: 'Modelo de dados de e-commerce (cliente, pedido, item, produto) mapeado e persistindo.',
+            recursos: [
+              { tipo: 'artigo', titulo: 'Baeldung — JPA/Hibernate guide', url: 'https://www.baeldung.com/learn-jpa-hibernate' },
+            ],
+          },
           {
             id: 'java-f3-m1',
             titulo: 'Maven e estrutura de projeto',
@@ -1031,33 +1061,14 @@ new ServicoPedido(new PedidoDaoEmMemoria());
               { tipo: 'doc', titulo: 'Mockito — documentacao', url: 'https://site.mockito.org/' },
             ],
           },
-          {
-            id: 'java-f3-m3',
-            titulo: 'JDBC e JPA/Hibernate',
-            horas: 14,
-            curso: { secao: 20, nome: 'JDBC e JPA/Hibernate' },
-            topicos: [
-              'JDBC puro: Connection, PreparedStatement, ResultSet (entender o que o JPA esconde)',
-              'SQL Injection e por que PreparedStatement resolve',
-              'ORM: mapear classe para tabela',
-              '@Entity, @Table, @Id, @GeneratedValue, @Column',
-              'Relacionamentos: @OneToMany, @ManyToOne, @ManyToMany, @OneToOne',
-              'Lazy vs Eager e o problema N+1',
-              'Cascade e orphanRemoval',
-              'JPQL basico',
-              'Transacoes e @Transactional',
-            ],
-            entregavel: 'Modelo de dados de e-commerce (cliente, pedido, item, produto) mapeado e persistindo.',
-            recursos: [
-              { tipo: 'artigo', titulo: 'Baeldung — JPA/Hibernate guide', url: 'https://www.baeldung.com/learn-jpa-hibernate' },
-            ],
-          },
+        
         ],
       },
       {
         id: 'java-f4',
-        nome: 'Spring Boot',
-        objetivo: 'O framework que aparece em praticamente toda vaga Java no Brasil.',
+        nome: 'Spring Boot (seção 22)',
+        objetivo:
+          'O framework que aparece em praticamente toda vaga Java no Brasil.',
         modulos: [
           {
             id: 'java-f4-m1',
@@ -1156,12 +1167,14 @@ new ServicoPedido(new PedidoDaoEmMemoria());
               { tipo: 'doc', titulo: 'springdoc-openapi', url: 'https://springdoc.org/' },
             ],
           },
+        
         ],
       },
       {
         id: 'java-f5',
-        nome: 'Entrega e portfolio',
-        objetivo: 'Tirar o projeto do localhost. E aqui que o junior se diferencia.',
+        nome: 'Entrega e portfólio (seções 23–25 + o que o curso não cobre)',
+        objetivo:
+          'Docker, CI/CD e deploy — nada disso está no curso, e é o que mais diferencia júnior. JavaFX fica por último, de propósito.',
         modulos: [
           {
             id: 'java-f5-m1',
@@ -1196,6 +1209,22 @@ new ServicoPedido(new PedidoDaoEmMemoria());
             ],
           },
           {
+            id: 'java-f5-m3',
+            titulo: 'Projeto final de portfolio',
+            horas: 40,
+            topicos: [
+              'Escolher um dominio real (nao "todo list"): clinica, oficina, biblioteca, financeiro',
+              'Modelar o banco antes de codar',
+              'API REST completa com auth, validacao e paginacao',
+              'Testes automatizados com cobertura razoavel',
+              'Docker + deploy publico com URL acessivel',
+              'README profissional: problema, stack, como rodar, print/gif, decisoes tecnicas',
+              'Board Kanban publico mostrando o processo',
+            ],
+            entregavel: 'Um projeto no ar, com URL, README completo e pipeline verde. Vale mais que 10 projetos de curso.',
+            recursos: [],
+          },
+          {
             id: 'java-f5-m4',
             titulo: 'JavaFX — interface grafica desktop (opcional)',
             horas: 30,
@@ -1216,22 +1245,7 @@ new ServicoPedido(new PedidoDaoEmMemoria());
             entregavel: 'CRUD desktop de departamentos e vendedores, com validacao e dialog.',
             recursos: [],
           },
-          {
-            id: 'java-f5-m3',
-            titulo: 'Projeto final de portfolio',
-            horas: 40,
-            topicos: [
-              'Escolher um dominio real (nao "todo list"): clinica, oficina, biblioteca, financeiro',
-              'Modelar o banco antes de codar',
-              'API REST completa com auth, validacao e paginacao',
-              'Testes automatizados com cobertura razoavel',
-              'Docker + deploy publico com URL acessivel',
-              'README profissional: problema, stack, como rodar, print/gif, decisoes tecnicas',
-              'Board Kanban publico mostrando o processo',
-            ],
-            entregavel: 'Um projeto no ar, com URL, README completo e pipeline verde. Vale mais que 10 projetos de curso.',
-            recursos: [],
-          },
+        
         ],
       },
     ],
