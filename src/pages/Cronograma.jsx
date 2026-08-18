@@ -35,7 +35,7 @@ function FormBloco({ inicial, onSalvar, onCancelar }) {
             ))}
           </select>
         </div>
-        <div className="field" style={{ marginBottom: 0, width: 120 }}>
+        <div className="field" style={{ marginBottom: 0, flex: '1 1 110px', minWidth: 110 }}>
           <label>Minutos</label>
           <input
             type="number" min="5" max="480" step="5"
@@ -43,7 +43,7 @@ function FormBloco({ inicial, onSalvar, onCancelar }) {
             onChange={(e) => setB({ ...b, minutos: Math.max(5, Number(e.target.value) || 5) })}
           />
         </div>
-        <div className="field" style={{ marginBottom: 0, width: 120 }}>
+        <div className="field" style={{ marginBottom: 0, flex: '1 1 110px', minWidth: 110 }}>
           <label>Horário</label>
           <input
             type="text" placeholder="19:00" maxLength={5}

@@ -415,8 +415,33 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
   .escala button { padding: 9px 4px; }
 }
 
+@media (max-width: 560px) {
+  /* Densidade: no celular, cartao com padding de desktop desperdica a largura
+     util e transforma dado curto em rolagem longa. */
+  .card { padding: 15px; }
+  .grid { gap: 10px; }
+  .stat { padding: 13px; }
+  .stat-value { font-size: 22px; }
+  .stat-label { font-size: 10px; letter-spacing: .04em; }
+  .stat-hint { font-size: 11.5px; line-height: 1.4; }
+  .page-head { margin-bottom: 18px; }
+  .page-head .sub { font-size: 13.8px; }
+  h2 { font-size: 18px; }
+  .acc-head, .fase-head { padding: 12px 13px; }
+  .fase-body { padding: 4px 13px 14px; }
+  .callout { padding: 11px 13px; font-size: 13.2px; }
+  .exemplo { font-size: 12.6px; }
+}
+
 @media (max-width: 420px) {
-  .grid-4 { grid-template-columns: 1fr; }
+  /* 4 metricas em UMA coluna viravam ~700px de rolagem so de numero.
+     Duas colunas cabem: 141px por cartao a 320px de viewport. */
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+
   .tabs { gap: 2px; }
-  .tab { padding: 8px 10px; font-size: 13px; }
+  .tab { padding: 8px 10px; font-size: 12.5px; }
+  .escala button { font-size: 11px; padding: 9px 3px; line-height: 1.25; }
+  .chip { font-size: 11px; padding: 3px 7px; }
+  .main { padding: 16px 12px calc(56px + env(safe-area-inset-bottom, 0px)); }
+  .nav-item { font-size: 12.5px; padding: 9px 8px; gap: 7px; }
 }

@@ -12,6 +12,8 @@ function Relogio() {
   const { fase, rodando, restante, ciclo, progresso, iniciar, pausar, zerar, pular, trocarFase } = usePomodoro()
   const { estado } = useApp()
   const f = FASES[fase]
+  // O anel era 260px fixo. Num iPhone SE (320px) sobravam 32px de respiro —
+  // funcionava, mas ficava colado nas bordas. Agora ele escala com a tela.
   const tam = 260
   const stroke = 12
   const r = (tam - stroke) / 2
@@ -36,8 +38,15 @@ function Relogio() {
         ))}
       </div>
 
-      <div style={{ position: 'relative', width: tam, height: tam, margin: '0 auto' }}>
-        <svg className="ring" width={tam} height={tam}>
+      <div
+        style={{
+          position: 'relative',
+          width: 'min(260px, 74vw)',
+          aspectRatio: '1 / 1',
+          margin: '0 auto',
+        }}
+      >
+        <svg className="ring" viewBox={`0 0 ${tam} ${tam}`} style={{ width: '100%', height: '100%' }}>
           <circle cx={tam / 2} cy={tam / 2} r={r} stroke="var(--surface-2)" strokeWidth={stroke} fill="none" />
           <circle
             cx={tam / 2} cy={tam / 2} r={r}
@@ -48,7 +57,7 @@ function Relogio() {
           />
         </svg>
         <div style={{ position: 'absolute', inset: 0, display: 'grid', placeContent: 'center' }}>
-          <div style={{ fontSize: 58, fontWeight: 700, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 'clamp(38px, 15vw, 58px)', fontWeight: 700, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>
             {mmss(restante)}
           </div>
           <div className="small muted center" style={{ marginTop: -6 }}>
