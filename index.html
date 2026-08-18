@@ -2,9 +2,38 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover respeita a area segura do notch no iPhone -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
     <title>DevPath — Trilha até Engenheiro de Software Júnior</title>
-    <meta name="description" content="Sistema pessoal de organizacao de estudos: roadmap, exercicios, entrevistas e LinkedIn." />
+    <meta name="description" content="Sistema pessoal de organizacao de estudos: roadmap, revisao espacada, pomodoro, ingles, exercicios e entrevistas." />
+
+    <!--
+      CSP em <meta> como REDE DE SEGURANCA para hospedagens que nao permitem
+      cabecalhos HTTP proprios — o GitHub Pages e uma delas. Na Vercel o
+      vercel.json manda e este meta e apenas redundante.
+
+      Limitacao real: frame-ancestors e Strict-Transport-Security SO funcionam
+      como cabecalho HTTP; em <meta> o navegador os ignora. Ou seja, no GitHub
+      Pages voce fica sem protecao contra clickjacking e sem HSTS.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none'"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- Celular: instalar na tela de inicio e barra do sistema no tom do app -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <meta name="theme-color" content="#0b0f16" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="DevPath" />
   </head>
   <body>
     <div id="root"></div>

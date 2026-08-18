@@ -1,0 +1,16 @@
+{
+  "name": "DevPath — Trilha até Engenheiro de Software Júnior",
+  "short_name": "DevPath",
+  "description": "Roadmap, revisão espaçada, pomodoro, inglês, exercícios e preparação para entrevistas.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0f16",
+  "theme_color": "#0b0f16",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

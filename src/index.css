@@ -363,13 +363,60 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
 
 @media (max-width: 900px) {
   .app { flex-direction: column; }
+
+  /* No celular a barra lateral vira um cabecalho fixo com a navegacao
+     QUEBRANDO EM LINHAS. Tira horizontal rolante esconde metade dos itens —
+     com 11 destinos, o usuario nunca acha o que esta fora da tela. */
   .sidebar {
-    width: 100%; height: auto; position: static;
-    flex-direction: row; align-items: center; gap: 14px;
-    overflow-x: auto; padding: 12px 14px;
+    width: 100%; height: auto;
+    /* NAO sticky: com 12 destinos o menu ocupa ~340px, que e 42% de uma tela
+       de celular. Fixo, ele engoliria a leitura. Aqui ele rola junto. */
+    position: static;
+    flex-direction: column; align-items: stretch; gap: 10px;
+    overflow: visible;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-top: calc(10px + env(safe-area-inset-top, 0px));
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 4px 16px rgba(0,0,0,.35);
   }
-  .nav { flex-direction: row; gap: 4px; }
-  .nav-group-title, .sidebar-foot, .brand-sub { display: none; }
-  .nav-item { white-space: nowrap; }
-  .main { padding: 20px 16px 60px; }
+
+  .brand { padding: 0; }
+  .brand-logo { width: 30px; height: 30px; font-size: 15px; }
+
+  .nav { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+  .nav > div { display: contents; }
+  .nav-group-title { display: none; }
+  .nav-item {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 42px;          /* alvo de toque confortavel */
+    padding: 9px 11px;
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    white-space: nowrap;
+  }
+  .nav-item.active { border-color: var(--accent); }
+
+  /* O progresso ja aparece no Painel; aqui so ocuparia altura util. */
+  .sidebar > div:nth-of-type(2) { display: none; }
+  .sidebar-foot { display: block; margin-top: 0; font-size: 11px; }
+  .brand-sub { display: none; }
+
+  .main { padding: 18px 14px calc(60px + env(safe-area-inset-bottom, 0px)); }
+
+  /* Tabelas e blocos de codigo rolam dentro de si, nunca a pagina inteira. */
+  pre { font-size: 11.5px; }
+  .page-head h1 { font-size: 22px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .btn { padding: 10px 14px; }   /* alvo de toque maior */
+  .topico { padding: 8px; }
+  .escala button { padding: 9px 4px; }
+}
+
+@media (max-width: 420px) {
+  .grid-4 { grid-template-columns: 1fr; }
+  .tabs { gap: 2px; }
+  .tab { padding: 8px 10px; font-size: 13px; }
 }

@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------------
+# Publica o DevPath no GitHub Pages a cada push na main.
+# ---------------------------------------------------------------------------
+# ANTES DE FUNCIONAR, faca 2 coisas no GitHub:
+#
+#   1. Settings -> Pages -> Source: "GitHub Actions"
+#   2. Settings -> Secrets and variables -> Actions -> New repository secret:
+#         VITE_SUPABASE_URL       = https://SEU-PROJETO.supabase.co
+#         VITE_SUPABASE_ANON_KEY  = sua chave anon/public
+#
+# Sem os secrets, o site sobe mas roda em modo local (sem login).
+#
+# Nota: variaveis VITE_ sao embutidas NO BUILD. Elas ficam visiveis no
+# JavaScript publicado — o que esta correto para a chave anon, que e publica
+# por design. NUNCA coloque a service_role aqui.
+# ---------------------------------------------------------------------------
+
+name: Deploy no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # permite rodar na mao pela aba Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Se voce empurrar dois commits seguidos, cancela o build antigo.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # No GitHub Pages o site fica em /nome-do-repo/, nao na raiz.
+          # Sem isto, todos os caminhos de assets quebram com 404.
+          VITE_BASE: /${{ github.event.repository.name }}/
+        run: npm run build
+
+      - name: Avisar se os secrets nao foram configurados
+        if: ${{ secrets.VITE_SUPABASE_URL == '' }}
+        run: |
+          echo "::warning::VITE_SUPABASE_URL nao definido. O site vai subir em MODO LOCAL, sem login e sem sincronizacao entre dispositivos."
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
