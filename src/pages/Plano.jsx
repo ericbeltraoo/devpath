@@ -127,7 +127,7 @@ export default function Plano() {
                           <ChipCurso curso={m.curso} compacto />
                         </span>
                       )}
-                      {m.marcoAtual && <span className="chip warn" style={{ marginLeft: 8 }}>seu ponto no curso</span>}
+                      {m.marcoAtual && <span className="chip warn" style={{ marginLeft: 8 }}>🎓 aula {m.marcoAtual.aula}</span>}
                     </span>
                     <span className="muted" style={{ whiteSpace: 'nowrap' }}>
                       {m.progresso.feitos}/{m.progresso.total} · {m.horas}h

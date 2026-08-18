@@ -22,7 +22,7 @@ function Modulo({ modulo, aberto }) {
           <div className="row" style={{ gap: 8 }}>
             <span className="modulo-titulo">{modulo.titulo}</span>
             <ChipCurso curso={modulo.curso} />
-            {modulo.marcoAtual && <span className="chip warn">seu ponto no curso</span>}
+            {modulo.marcoAtual && <span className="chip warn">🎓 voce esta aqui · aula {modulo.marcoAtual.aula}</span>}
             {p.pct === 100 && <span className="chip ok">✓</span>}
           </div>
           <div className="small muted" style={{ marginTop: 2 }}>

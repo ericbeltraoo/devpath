@@ -295,7 +295,8 @@ export const TRILHAS = [
             id: 'java-f1-m4',
             titulo: 'Data e hora (java.time)',
             horas: 8,
-            marcoAtual: true,
+            // Ponto confirmado por ele em 18/08/2026: aula 121 do curso.
+            marcoAtual: { aula: 121, nome: 'Calculos com data-hora' },
             topicos: [
               'LocalDate, LocalTime, LocalDateTime — data sem fuso',
               'Instant — instante global (UTC), o tipo certo para gravar no banco',
