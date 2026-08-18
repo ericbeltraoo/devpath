@@ -472,6 +472,132 @@ java.util.Date legado = java.util.Date.from(Instant.now());`,
               'Composicao — objeto que tem outro objeto',
             ],
             entregavel: 'Modelar um sistema de aluguel de veiculos com 4 classes que se relacionam.',
+            licoes: [
+              {
+                titulo: 'Encapsulamento nao e "criar getter e setter para tudo"',
+                explicacao:
+                  'A maioria aprende encapsulamento como um ritual: deixe o campo private e gere getter e setter para cada um. Isso nao encapsula nada — e o mesmo campo publico, so que com mais linhas. Encapsular e proteger o INVARIANTE: a regra que precisa ser verdade o tempo todo. Se saldo nunca pode ficar negativo, entao nao existe setSaldo; existe sacar() e depositar(), que validam. O setter so deve existir quando alterar aquele campo isoladamente e uma operacao legitima do dominio. Pergunte sempre: "que regra eu quebro se alguem mudar isso direto?" Se existe regra, nao ha setter.',
+                codigo: `// ANEMICO — parece encapsulado, nao esta
+public class Conta {
+    private BigDecimal saldo;
+    public void setSaldo(BigDecimal s) { this.saldo = s; }  // saldo -500? tudo bem
+    public BigDecimal getSaldo() { return saldo; }
+}
+
+// ENCAPSULADO — a classe protege a propria regra
+public class Conta {
+    private BigDecimal saldo;
+
+    public void depositar(BigDecimal valor) {
+        if (valor.compareTo(BigDecimal.ZERO) <= 0)
+            throw new IllegalArgumentException("Deposito deve ser positivo");
+        saldo = saldo.add(valor);
+    }
+
+    public void sacar(BigDecimal valor) {
+        if (valor.compareTo(saldo) > 0)
+            throw new SaldoInsuficienteException(numero, valor, saldo);
+        saldo = saldo.subtract(valor);
+    }
+
+    public BigDecimal getSaldo() { return saldo; }  // ler tudo bem; escrever nao
+}`,
+                erroComum:
+                  'Gerar getter e setter automaticamente pela IDE para todos os campos. Voce acabou de expor o estado inteiro e a classe virou um saco de dados — o que se chama de modelo anemico.',
+                pergunta:
+                  'Na sua classe Funcionario, quais campos NAO deveriam ter setter? Justifique cada um pela regra que ele protege.',
+              },
+              {
+                titulo: 'Construtor: o momento em que o objeto nasce valido',
+                explicacao:
+                  'O construtor tem uma responsabilidade que nenhum outro metodo tem: garantir que nao existe objeto invalido no sistema. Se uma Conta precisa de titular, o construtor exige titular — assim nao existe Conta sem dono em lugar nenhum do codigo. Isso elimina uma classe inteira de bug: o "objeto meio construido", aquele que passou pelo new mas ainda nao foi preenchido. Sobrecarga de construtor serve para oferecer atalhos, mas todos devem convergir para um construtor principal com this(...), para a validacao viver num lugar so.',
+                codigo: `public class Funcionario {
+    private final String matricula;   // final: definido no nascimento, nunca muda
+    private final String nome;
+    private Cargo cargo;
+
+    // Construtor principal: unico lugar com validacao
+    public Funcionario(String matricula, String nome, Cargo cargo) {
+        if (matricula == null || matricula.isBlank())
+            throw new IllegalArgumentException("Matricula obrigatoria");
+        if (nome == null || nome.isBlank())
+            throw new IllegalArgumentException("Nome obrigatorio");
+        this.matricula = matricula;
+        this.nome = nome;
+        this.cargo = Objects.requireNonNull(cargo, "Cargo obrigatorio");
+    }
+
+    // Atalho: delega, nao duplica a validacao
+    public Funcionario(String matricula, String nome) {
+        this(matricula, nome, Cargo.ANALISTA);
+    }
+}`,
+                erroComum:
+                  'Deixar o construtor vazio e preencher com setters depois. Entre o new e o ultimo setter existe um objeto invalido circulando — e alguem vai usa-lo nesse estado.',
+                pergunta:
+                  'Por que "final" na matricula ajuda a proteger o invariante? O que ele impede que aconteca?',
+              },
+              {
+                titulo: 'equals, hashCode e o contrato que quebra HashMap em silencio',
+                explicacao:
+                  'Por padrao, equals compara referencia: dois objetos com exatamente os mesmos dados sao "diferentes". Voce sobrescreve equals para dizer o que torna dois objetos o mesmo no seu dominio — normalmente a identidade de negocio, como a matricula do funcionario ou o numero da conta. Mas existe um contrato: se a.equals(b) e verdadeiro, entao a.hashCode() == b.hashCode() obrigatoriamente. HashMap e HashSet primeiro calculam o hash para achar o balde, e so depois usam equals. Se voce sobrescreve so o equals, o objeto vai parar em baldes diferentes e o Set aceita duplicata sem reclamar. Nao lanca erro, nao aparece no teste simples — voce descobre em producao.',
+                codigo: `public class Funcionario {
+    private final String matricula;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Funcionario outro = (Funcionario) o;
+        return matricula.equals(outro.matricula);   // identidade de negocio
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(matricula);             // MESMO campo do equals
+    }
+}
+
+// Sem o hashCode acima, isto falha silenciosamente:
+Set<Funcionario> equipe = new HashSet<>();
+equipe.add(new Funcionario("123", "Ana"));
+equipe.add(new Funcionario("123", "Ana"));
+System.out.println(equipe.size());   // 2 — e deveria ser 1`,
+                erroComum:
+                  'Usar campos mutaveis no hashCode. Se voce muda esse campo depois de por o objeto num HashSet, o hash muda de lugar e o objeto some da colecao — ele esta la, mas contains() devolve false.',
+                pergunta:
+                  'Por que usar TODOS os campos no equals costuma ser errado? Pense em dois registros do mesmo funcionario com o cargo atualizado.',
+              },
+              {
+                titulo: 'static: pertence a classe, nao ao objeto',
+                explicacao:
+                  'Um membro static existe uma vez so, compartilhado por todas as instancias — e existe mesmo sem nenhuma instancia. Serve para tres coisas: constantes (static final), metodos utilitarios sem estado (Math.max) e contadores da classe inteira. Serve mal para quase todo o resto. O erro classico e usar static como atalho para "acessar de qualquer lugar", o que cria estado global: dois pontos do codigo alterando o mesmo dado sem se conhecer, impossivel de testar isoladamente e quebrado sob concorrencia. Se voce esta pondo static so para nao precisar passar o objeto, pare — passe o objeto.',
+                codigo: `public class Funcionario {
+    // Constante: um valor so, imutavel, para todos
+    public static final int HORAS_SEMANAIS_PADRAO = 44;
+
+    // Contador da classe: quantos ja foram criados
+    private static int totalCriados = 0;
+
+    private final String matricula;   // de instancia: cada um tem o seu
+
+    public Funcionario(String matricula) {
+        this.matricula = matricula;
+        totalCriados++;               // afeta a classe inteira
+    }
+
+    // Metodo static: nao depende de nenhuma instancia
+    public static int getTotalCriados() { return totalCriados; }
+
+    // Isto NAO compila: metodo static nao enxerga campo de instancia
+    // public static String pegarMatricula() { return matricula; }
+}`,
+                erroComum:
+                  'Guardar estado de negocio em campo static "para facilitar o acesso". Vira variavel global: qualquer parte do sistema altera, ninguem sabe quem alterou, e o teste seguinte herda a sujeira do anterior.',
+                pergunta:
+                  'Por que um metodo static nao consegue acessar um campo de instancia? Responda pensando em QUANDO cada um passa a existir.',
+              },
+            ],
             recursos: [],
           },
           {
@@ -492,6 +618,125 @@ java.util.Date legado = java.util.Date.from(Instant.now());`,
             ],
             entregavel:
               'Hierarquia de contas bancarias (corrente, poupanca, salario) com regra de saque diferente em cada uma, resolvida por polimorfismo.',
+            licoes: [
+              {
+                titulo: 'Polimorfismo e o que mata o if de tipo',
+                explicacao:
+                  'Polimorfismo, na pratica, resolve um problema muito concreto: o switch gigante que testa o tipo do objeto para decidir o que fazer. Toda vez que voce escreve "if (tipo == CARRO) ... else if (tipo == MOTO)", voce assumiu uma divida: cada tipo novo obriga a caçar todos os ifs espalhados pelo sistema e editar cada um. Com polimorfismo, cada subclasse carrega o proprio comportamento e o chamador nao sabe nem precisa saber com qual esta falando. Adicionar um tipo novo vira criar uma classe nova, sem tocar em codigo que ja funciona. Isso e literalmente o "O" do SOLID: aberto para extensao, fechado para modificacao.',
+                codigo: `// ANTES — cada tipo novo obriga a editar este metodo
+public BigDecimal calcularDiaria(Veiculo v, int dias) {
+    if (v.getTipo() == TipoVeiculo.CARRO)   return BigDecimal.valueOf(120 * dias);
+    if (v.getTipo() == TipoVeiculo.MOTO)    return BigDecimal.valueOf(60 * dias);
+    if (v.getTipo() == TipoVeiculo.CAMINHAO)return BigDecimal.valueOf(350 * dias);
+    throw new IllegalArgumentException("Tipo desconhecido");
+}
+
+// DEPOIS — cada tipo sabe se calcular
+public abstract class Veiculo {
+    protected final String placa;
+    public abstract BigDecimal diariaBase();
+
+    public BigDecimal calcularDiaria(int dias) {
+        return diariaBase().multiply(BigDecimal.valueOf(dias));
+    }
+}
+
+public class Moto extends Veiculo {
+    @Override public BigDecimal diariaBase() { return new BigDecimal("60.00"); }
+}
+
+// O chamador nao precisa saber o tipo. Nunca mais.
+for (Veiculo v : frota) {
+    System.out.println(v.calcularDiaria(3));
+}`,
+                erroComum:
+                  'Manter o instanceof depois de criar a hierarquia. Se voce precisa perguntar "que tipo e esse?" para decidir, o comportamento esta no lugar errado — mova para dentro da classe.',
+                pergunta:
+                  'Voce precisa adicionar Van com regra de diaria diferente. Quantos arquivos voce toca em cada uma das duas versoes acima? Essa diferenca e o valor do polimorfismo.',
+              },
+              {
+                titulo: 'Classe abstrata ou interface: a decisao real',
+                explicacao:
+                  'A pergunta que resolve: existe estado ou codigo repetido para compartilhar? Se sim, classe abstrata; ela pode ter campos, construtor e metodos ja implementados. Se voce so precisa definir um contrato — "quem implementar isso sabe fazer X" — e interface. A diferenca estrutural que decide muitos casos: uma classe estende UMA classe, mas implementa QUANTAS interfaces quiser. Entao interface modela capacidade (Exportavel, Comparavel), que aparece em classes sem nenhum parentesco entre si; classe abstrata modela "e-um" com base comum. Na duvida, prefira interface e composicao: heranca amarra voce a uma hierarquia para sempre, e mudar isso depois e caro.',
+                codigo: `// Classe abstrata: ha estado (placa) e codigo compartilhado (calcularDiaria)
+public abstract class Veiculo {
+    protected final String placa;
+    protected Veiculo(String placa) { this.placa = placa; }
+
+    public abstract BigDecimal diariaBase();          // cada filho decide
+
+    public BigDecimal calcularDiaria(int dias) {      // todos herdam pronto
+        return diariaBase().multiply(BigDecimal.valueOf(dias));
+    }
+}
+
+// Interface: capacidade, sem parentesco entre quem implementa
+public interface Exportavel {
+    String paraCsv();
+
+    default String cabecalhoCsv() { return ""; }      // default: nao quebra quem ja implementa
+}
+
+// Combinando: e-um Veiculo, e tambem sabe se exportar
+public class Caminhao extends Veiculo implements Exportavel {
+    @Override public BigDecimal diariaBase() { return new BigDecimal("350.00"); }
+    @Override public String paraCsv() { return placa + ";CAMINHAO"; }
+}`,
+                erroComum:
+                  'Criar heranca so para reaproveitar um metodo. Se a relacao nao e honestamente "e-um", voce vai acabar com uma subclasse que herda coisas que nao fazem sentido para ela.',
+                pergunta:
+                  'Relatorio, Funcionario e Veiculo precisam virar CSV. Interface ou classe abstrata? Justifique pela relacao entre eles.',
+              },
+              {
+                titulo: 'Sobrescrita vs sobrecarga: o erro que o @Override pega',
+                explicacao:
+                  'Sobrescrita (override) e redefinir na subclasse um metodo da superclasse: MESMA assinatura, comportamento diferente. Sobrecarga (overload) e ter varios metodos com o MESMO nome e parametros diferentes, na mesma classe. Parecem proximos e o efeito de confundir e cruel: se voce quer sobrescrever mas erra um parametro, o Java entende que voce criou um metodo novo por sobrecarga — compila, roda, e o comportamento da superclasse continua valendo. O bug e silencioso. A anotacao @Override existe para isso: ela nao muda nada em execucao, so faz o compilador conferir se voce realmente esta sobrescrevendo algo. Use sempre.',
+                codigo: `public abstract class Veiculo {
+    public BigDecimal calcularMulta(long diasAtraso) { ... }
+}
+
+public class Moto extends Veiculo {
+
+    // BUG: int em vez de long. Isto e SOBRECARGA, nao sobrescrita.
+    // Sem @Override, compila e a versao da superclasse continua sendo chamada.
+    public BigDecimal calcularMulta(int diasAtraso) { ... }
+
+    // Com @Override, o compilador acusa na hora:
+    // "method does not override or implement a method from a supertype"
+    @Override
+    public BigDecimal calcularMulta(long diasAtraso) { ... }
+}`,
+                erroComum:
+                  'Omitir @Override "porque e opcional". E opcional para o compilador rodar e obrigatorio para voce dormir tranquilo. Sem ela, erro de assinatura vira bug de producao.',
+                pergunta:
+                  'Se voce sobrescreve equals(Funcionario o) em vez de equals(Object o), o que acontece quando o HashSet chamar equals? Responda antes de testar.',
+              },
+              {
+                titulo: 'Upcasting, downcasting e por que instanceof e cheiro de problema',
+                explicacao:
+                  'Upcasting e tratar um objeto pelo tipo mais generico — Veiculo v = new Moto(). E sempre seguro e e o que torna o polimorfismo possivel: voce guarda tudo numa List<Veiculo> e chama o mesmo metodo. Downcasting e o caminho de volta, forcando o tipo especifico, e nao e seguro: se o objeto nao for daquele tipo, estoura ClassCastException em execucao. Por isso o instanceof aparece antes, como protecao. Mas na maioria das vezes o instanceof e sintoma: ele existe porque falta um metodo na abstracao. Antes de escrever um, pergunte se o comportamento nao deveria estar dentro da propria classe. Existem casos legitimos — equals e um deles — mas sao poucos.',
+                codigo: `List<Veiculo> frota = List.of(new Moto("ABC1D23"), new Caminhao("XYZ9K88"));
+
+// Upcasting implicito: seguro, e o que permite a lista unica
+for (Veiculo v : frota) {
+    System.out.println(v.calcularDiaria(2));   // cada um se comporta como e
+}
+
+// Downcasting: precisa de protecao
+for (Veiculo v : frota) {
+    if (v instanceof Caminhao c) {             // pattern matching (Java 16+)
+        System.out.println(c.getCapacidadeCarga());
+    }
+}
+
+// Melhor ainda: se TODO veiculo tem uma capacidade (nem que seja zero),
+// o metodo sobe para a abstracao e o instanceof desaparece.`,
+                erroComum:
+                  'Encher o codigo de instanceof para "resolver" o polimorfismo. Voce montou a hierarquia e continuou programando por tipo — ficou com o custo da heranca sem o beneficio dela.',
+                pergunta:
+                  'Olhe seu proprio codigo e ache um instanceof. Que metodo faltando na superclasse tornaria ele desnecessario?',
+              },
+            ],
             recursos: [],
           },
           {

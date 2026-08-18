@@ -5,10 +5,15 @@ import { EXERCICIOS } from '../data/exercises'
 import { PERGUNTAS } from '../data/interview'
 import { CRITERIOS, avaliar } from '../data/linkedin'
 import { formatarData, progressoModulo } from '../lib/planner'
-import { Bar, Ring, Stat } from '../components/ui'
+import { DESAFIOS } from '../data/desafios'
+import { estatisticasRevisao } from '../lib/revisao'
+import { usePomodoro } from '../context/PomodoroContext'
+import { formatarMinutos, mmss } from '../lib/pomodoro'
+import { Bar, Ring, Stat, Callout } from '../components/ui'
 
 export default function Dashboard() {
-  const { estado, plano } = useApp()
+  const { estado, plano, fila, bloqueio } = useApp()
+  const { rodando, restante, fase } = usePomodoro()
   const nome = estado.perfil.nome
 
   const exFeitos = Object.values(estado.exercicios).filter((v) => v === 'feito').length
@@ -17,6 +22,13 @@ export default function Dashboard() {
   const notaLinkedin = respondidoLinkedin > 0 ? avaliar(estado.linkedin.respostas).nota : null
 
   const proximo = plano.proximo
+  const statsRevisao = estatisticasRevisao(estado.revisoes)
+  const desafiosFeitos = DESAFIOS.filter((d) => estado.desafios[d.id]?.status === 'feito').length
+
+  const hoje = new Date().toISOString().slice(0, 10)
+  const focoHoje = estado.pomodoro.sessoes
+    .filter((s) => s.fim.slice(0, 10) === hoje)
+    .reduce((a, s) => a + s.minutos, 0)
 
   return (
     <>
@@ -25,6 +37,72 @@ export default function Dashboard() {
         <div className="sub">
           Objetivo: <b>{plano.objetivo.nome}</b> · ritmo de {plano.horasSemana}h por semana.
         </div>
+      </div>
+
+      {bloqueio && (
+        <Callout tipo="danger" titulo="🔒 Conteúdo novo travado">
+          {bloqueio.mensagem}{' '}
+          <Link to="/revisao" style={{ fontWeight: 600 }}>Derrubar a fila →</Link>
+        </Callout>
+      )}
+
+      {/* ------------------------------------------------------------ hoje */}
+      <div className="card" style={{ marginTop: bloqueio ? 14 : 0 }}>
+        <div className="card-title" style={{ marginBottom: 4 }}>Seu dia</div>
+        <div className="card-sub" style={{ marginBottom: 14 }}>
+          A ordem importa: revisar primeiro, conteúdo novo depois. Revisão pendente é dívida — ela cobra juros.
+        </div>
+
+        <div className="grid grid-3">
+          <Link
+            to="/revisao"
+            className="card"
+            style={{
+              color: 'inherit', display: 'block', padding: 14,
+              borderColor: fila.vencidas.length > 0 ? 'var(--danger)' : fila.pendentes.length > 0 ? 'var(--accent)' : 'var(--border-soft)',
+            }}
+          >
+            <div className="spread" style={{ marginBottom: 6 }}>
+              <span className="small" style={{ fontWeight: 650 }}>🔁 Revisão</span>
+              {fila.vencidas.length > 0 && <span className="chip danger">{fila.vencidas.length} atrasada(s)</span>}
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>{fila.pendentes.length}</div>
+            <div className="small muted">
+              {fila.pendentes.length === 0 ? 'fila zerada — pode avançar' : 'tópicos esperando'}
+            </div>
+          </Link>
+
+          <Link to="/pomodoro" className="card" style={{ color: 'inherit', display: 'block', padding: 14 }}>
+            <div className="spread" style={{ marginBottom: 6 }}>
+              <span className="small" style={{ fontWeight: 650 }}>⏱️ Foco hoje</span>
+              {rodando && <span className="chip info">{mmss(restante)}</span>}
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>{formatarMinutos(focoHoje)}</div>
+            <div className="small muted">
+              {rodando ? `em ${fase === 'foco' ? 'bloco de foco' : 'pausa'}` : 'cronômetro parado'}
+            </div>
+          </Link>
+
+          <Link to="/desafios" className="card" style={{ color: 'inherit', display: 'block', padding: 14 }}>
+            <div className="spread" style={{ marginBottom: 6 }}>
+              <span className="small" style={{ fontWeight: 650 }}>🎯 Desafios</span>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>
+              {desafiosFeitos}<span className="muted" style={{ fontSize: 15 }}>/{DESAFIOS.length}</span>
+            </div>
+            <div className="small muted">entregues</div>
+          </Link>
+        </div>
+
+        {statsRevisao.total > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <div className="spread small muted" style={{ marginBottom: 5 }}>
+              <span>Retenção: {statsRevisao.dominados} de {statsRevisao.total} tópicos consolidados</span>
+              <span>{statsRevisao.fracos} ainda frágeis</span>
+            </div>
+            <Bar pct={(statsRevisao.dominados / statsRevisao.total) * 100} thin cor="var(--ok)" />
+          </div>
+        )}
       </div>
 
       {/* -------------------------------------------------- resumo geral */}

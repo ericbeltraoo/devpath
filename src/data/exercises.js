@@ -37,6 +37,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '1h',
     tags: ['java.time', 'LocalDate', 'Duration', 'atual'],
+    revisa: ["java-f1-m1","java-f1-m2","java-f1-m5"],
     enunciado:
       'Crie uma classe DataUtils com metodos utilitarios de data. Este exercicio cobre exatamente o ponto do curso onde voce esta agora.',
     requisitos: [
@@ -68,6 +69,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '3h',
     tags: ['POO', 'heranca', 'excecao'],
+    revisa: ["java-f1-m3","java-f1-m4","java-f2-m1"],
     enunciado:
       'Modele contas bancarias onde cada tipo tem regra de saque diferente. Classico de prova de POO e de entrevista.',
     requisitos: [
@@ -94,6 +96,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '2h',
     tags: ['streams', 'collectors', 'lambda'],
+    revisa: ["java-f2-m1","java-f2-m4","java-f1-m4"],
     enunciado:
       'Dada uma List<Venda> (produto, categoria, vendedor, valor, data), produza um relatorio usando apenas Streams.',
     requisitos: [
@@ -119,6 +122,7 @@ export const EXERCICIOS = [
     tipo: 'projeto',
     tempo: '12h',
     tags: ['spring', 'rest', 'jpa', 'projeto'],
+    revisa: ["java-f2-m3","java-f2-m4","java-f1-m4","db-f1-m1"],
     enunciado:
       'Construa uma API completa de emprestimo de livros. Este e o formato exato do teste tecnico take-home de vaga junior.',
     requisitos: [
@@ -153,6 +157,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '6h',
     tags: ['spring security', 'jwt', 'seguranca'],
+    revisa: ["java-f4-m2","base-f2-m2"],
     enunciado:
       'Adicione autenticacao e autorizacao a API da biblioteca, sem copiar tutorial pronto — entendendo cada filtro.',
     requisitos: [
@@ -203,6 +208,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '4h',
     tags: ['reactive forms', 'validacao'],
+    revisa: ["ang-f1-m3","ang-f2-m1"],
     enunciado: 'Cadastro de usuario com Reactive Forms e validacoes reais de mercado.',
     requisitos: [
       'Campos: nome, email, CPF, senha, confirmacao de senha, data de nascimento',
@@ -227,6 +233,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '2h',
     tags: ['rxjs', 'switchMap', 'entrevista'],
+    revisa: ["ang-f2-m2","ang-f1-m2"],
     enunciado:
       'Campo de busca que consulta a API a cada digitacao — sem inundar o servidor e sem race condition. Pergunta classica de entrevista Angular.',
     requisitos: [
@@ -251,6 +258,7 @@ export const EXERCICIOS = [
     tipo: 'projeto',
     tempo: '15h',
     tags: ['integracao', 'jwt', 'guard', 'projeto'],
+    revisa: ["ang-f2-m2","ang-f2-m3","java-f4-m4"],
     enunciado:
       'Interface Angular completa para a API de biblioteca. Fullstack de verdade — o que mais impressiona em portfolio junior.',
     requisitos: [
@@ -326,6 +334,7 @@ export const EXERCICIOS = [
     tipo: 'sql',
     tempo: '2h',
     tags: ['join', 'agregacao', 'having'],
+    revisa: ["db-f1-m1","db-f1-m2"],
     enunciado: 'Sobre o banco do e-commerce, escreva 8 consultas de relatorio.',
     requisitos: [
       'Faturamento por mes dos ultimos 12 meses',
@@ -352,6 +361,7 @@ export const EXERCICIOS = [
     tipo: 'sql',
     tempo: '3h',
     tags: ['performance', 'indice', 'explain'],
+    revisa: ["db-f1-m3","db-f2-m1"],
     enunciado: 'Popule uma tabela com 1 milhao de linhas e otimize uma consulta lenta.',
     requisitos: [
       'Gerar massa de dados (generate_series no Postgres)',
@@ -459,6 +469,7 @@ export const EXERCICIOS = [
     tipo: 'logica',
     tempo: '45 min',
     tags: ['hashmap', 'string', 'entrevista'],
+    revisa: ["base-f3-m1","java-f2-m4"],
     enunciado: 'Agrupe palavras que sao anagramas entre si.',
     requisitos: ['Chave canonica por palavra', 'Solucao O(n * k log k)', 'Bonus: solucao com contagem de caracteres, O(n * k)'],
     criteriosAceite: ['Case-insensitive', 'Ordem dos grupos nao importa', 'Palavra unica forma grupo de 1'],
@@ -472,6 +483,7 @@ export const EXERCICIOS = [
     tipo: 'codigo',
     tempo: '3h',
     tags: ['clean code', 'solid', 'refatoracao'],
+    revisa: ["java-f2-m2","base-f3-m3"],
     enunciado:
       'Pegue uma classe sua com mais de 200 linhas (ou escreva uma de proposito) e refatore aplicando SOLID. Documente cada decisao.',
     requisitos: [
@@ -496,6 +508,7 @@ export const EXERCICIOS = [
     tipo: 'entrevista',
     tempo: '90 min',
     tags: ['simulado', 'entrevista', 'pressao'],
+    revisa: ["base-f3-m1","db-f1-m3"],
     enunciado:
       'Simule as condicoes reais: 90 minutos, cronometro visivel, sem consultar solucao pronta, falando em voz alta o raciocinio.',
     requisitos: [
@@ -515,6 +528,156 @@ export const EXERCICIOS = [
       'Comece pela forca bruta e diga que vai otimizar depois',
     ],
   },
+  // --------------------------- CUMULATIVOS -------------------------------
+  // Estes existem por um motivo unico: voce disse que esquece o conteudo
+  // anterior. Exercicio que so cobra o assunto da semana esconde isso ate a
+  // entrevista. Cada um aqui obriga a puxar coisas de modulos ja concluidos.
+  {
+    id: 'ex-cum-01',
+    trilha: 'java',
+    titulo: 'CUMULATIVO 1 — Folha de ponto',
+    nivel: 2,
+    tipo: 'cumulativo',
+    tempo: '4h',
+    tags: ['cumulativo', 'java.time', 'POO', 'colecoes'],
+    revisa: ['java-f1-m2', 'java-f1-m3', 'java-f1-m4', 'java-f1-m5', 'java-f2-m1'],
+    enunciado:
+      'Sistema de folha de ponto de uma equipe. Este exercicio cobra TUDO que voce viu ate o fim da POO basica ao mesmo tempo — se travar em alguma parte, voce achou exatamente o buraco que precisa revisar.',
+    requisitos: [
+      'Classe Funcionario com nome, matricula e cargo, encapsulada',
+      'Registro de ponto com entrada e saida (java.time)',
+      'Calcular horas trabalhadas no dia, descontando 1h de almoco se passar de 6h',
+      'Calcular horas extras da semana (acima de 44h) e adicional de 50%',
+      'Identificar faltas: dia util sem registro',
+      'Relatorio mensal por funcionario, ordenado por horas extras',
+      'Menu de console com validacao de entrada',
+    ],
+    criteriosAceite: [
+      'Nenhum uso de Date ou Calendar',
+      'BigDecimal no calculo de valores',
+      'toString, equals e hashCode implementados em Funcionario',
+      'main com no maximo 15 linhas',
+      'Feriado nacional pode ser cadastrado e conta como nao-util',
+    ],
+    dicas: [
+      'Se voce nao lembra como calcular dias uteis, NAO consulte: tente, erre, e so depois volte no modulo de data-hora.',
+      'A ordenacao do relatorio cobra Comparator. Se travou aqui, seu modulo de colecoes precisa de revisao.',
+    ],
+  },
+  {
+    id: 'ex-cum-02',
+    trilha: 'java',
+    titulo: 'CUMULATIVO 2 — Locadora com heranca e excecoes',
+    nivel: 2,
+    tipo: 'cumulativo',
+    tempo: '5h',
+    tags: ['cumulativo', 'heranca', 'excecao', 'streams'],
+    revisa: ['java-f1-m4', 'java-f2-m1', 'java-f2-m2', 'java-f2-m3', 'java-f2-m4', 'java-f2-m5'],
+    enunciado:
+      'Locadora de veiculos com tipos diferentes de contrato. Fecha o ciclo de POO puxando de volta data-hora, colecoes e streams.',
+    requisitos: [
+      'Hierarquia: Veiculo abstrato, com Carro, Moto e Caminhao',
+      'Regra de diaria diferente por tipo, resolvida por polimorfismo (zero instanceof)',
+      'Locacao com retirada e devolucao; atraso gera multa progressiva',
+      'Excecoes de dominio: VeiculoIndisponivelException, DevolucaoInvalidaException',
+      'Busca por disponibilidade num periodo, usando Streams',
+      'Relatorio de faturamento por tipo de veiculo com groupingBy',
+    ],
+    criteriosAceite: [
+      'Adicionar um 4o tipo de veiculo nao exige tocar na classe de locacao',
+      'Nenhum catch vazio; toda excecao tem mensagem util',
+      'Sobreposicao de periodo tratada corretamente (a pegadinha classica)',
+      'Optional usado onde a busca pode nao achar nada',
+    ],
+    dicas: [
+      'Sobreposicao de periodos: dois intervalos colidem se inicioA < fimB E inicioB < fimA. Desenhe antes de codar.',
+    ],
+  },
+  {
+    id: 'ex-cum-03',
+    trilha: 'java',
+    titulo: 'CUMULATIVO 3 — Do console para a API',
+    nivel: 3,
+    tipo: 'cumulativo',
+    tempo: '10h',
+    tags: ['cumulativo', 'spring', 'jpa', 'refatoracao'],
+    revisa: ['java-f2-m2', 'java-f2-m4', 'java-f3-m1', 'java-f3-m3', 'java-f4-m1', 'java-f4-m2', 'db-f1-m1'],
+    enunciado:
+      'Pegue o SEU codigo do cumulativo 2 e transforme em API REST com persistencia — sem reescrever do zero. O objetivo e enxergar que Spring nao substitui POO: ele organiza a POO que voce ja tinha.',
+    requisitos: [
+      'Manter as classes de dominio e as regras onde ja estavam',
+      'Mapear as entidades com JPA, preservando a heranca (escolha e justifique a estrategia)',
+      'Camadas Controller / Service / Repository',
+      'DTOs de entrada e saida; entidade nao aparece na API',
+      'Bean Validation nos payloads',
+      '@RestControllerAdvice traduzindo suas excecoes de dominio para status HTTP',
+      'Migrations com Flyway',
+    ],
+    criteriosAceite: [
+      'A regra de calculo de diaria continua sendo a MESMA classe do exercicio anterior',
+      'VeiculoIndisponivelException vira 409, nao 500',
+      'Nenhum if de regra de negocio dentro do Controller',
+      'Testes do cumulativo 2 continuam passando',
+    ],
+    dicas: [
+      'Heranca no JPA tem 3 estrategias: SINGLE_TABLE, JOINED e TABLE_PER_CLASS. Escolha uma e saiba defender o tradeoff.',
+      'Se voce se pegar reescrevendo a regra dentro do Service, parou de refatorar e comecou a duplicar.',
+    ],
+  },
+  {
+    id: 'ex-cum-04',
+    trilha: 'db',
+    titulo: 'CUMULATIVO 4 — Da modelagem ao gargalo',
+    nivel: 3,
+    tipo: 'cumulativo',
+    tempo: '6h',
+    tags: ['cumulativo', 'sql', 'performance', 'jpa'],
+    revisa: ['db-f1-m1', 'db-f1-m2', 'db-f1-m3', 'db-f2-m1', 'java-f3-m3'],
+    enunciado:
+      'Sobre o banco da sua API: gere massa de dados, encontre a consulta mais lenta e otimize. Fecha o ciclo de banco puxando modelagem, SQL e JPA de uma vez.',
+    requisitos: [
+      'Gerar 200 mil locacoes distribuidas em 2 anos',
+      'Escrever 5 relatorios com JOIN, GROUP BY, HAVING e window function',
+      'Medir cada um e identificar o mais lento',
+      'EXPLAIN ANALYZE e diagnostico escrito da causa',
+      'Criar o indice adequado e medir de novo',
+      'Encontrar e corrigir pelo menos um N+1 vindo do JPA',
+    ],
+    criteriosAceite: [
+      'Documento com antes/depois em milissegundos por consulta',
+      'O N+1 foi identificado pelo LOG DE SQL, nao por chute',
+      'Voce sabe explicar por que o indice escolhido funciona para aquela consulta',
+    ],
+    dicas: ['Ligue spring.jpa.show-sql e conte as queries. Se uma listagem de 20 itens dispara 21 queries, achou.'],
+  },
+  {
+    id: 'ex-cum-05',
+    trilha: 'base',
+    titulo: 'CUMULATIVO 5 — Explique seu proprio codigo',
+    nivel: 3,
+    tipo: 'cumulativo',
+    tempo: '2h',
+    tags: ['cumulativo', 'entrevista', 'comunicacao'],
+    revisa: ['java-f2-m2', 'java-f4-m2', 'db-f2-m1', 'base-f3-m2'],
+    enunciado:
+      'Grave um video de 15 minutos explicando o projeto que voce construiu nos cumulativos anteriores, como se fosse a entrevista tecnica. Depois assista e avalie a si mesmo.',
+    requisitos: [
+      'Comece pelo problema, nao pela stack',
+      'Percorra as camadas explicando a responsabilidade de cada uma',
+      'Aponte uma decisao dificil e o tradeoff que voce aceitou',
+      'Aponte algo que voce faria diferente hoje',
+      'Responda em voz alta: por que heranca e nao composicao? Por que essa estrategia de JPA?',
+      'Assista a gravacao e anote todo ponto onde voce hesitou',
+    ],
+    criteriosAceite: [
+      'Nao leu de nenhum papel',
+      'Nenhuma frase do tipo "aqui eu usei porque o tutorial usava"',
+      'Cada hesitacao virou um item na sua fila de revisao',
+    ],
+    dicas: [
+      'Se voce nao consegue explicar uma decisao do seu proprio codigo, voce copiou — nao decidiu. Esse e o ponto do exercicio.',
+    ],
+  },
 ]
 
 export const NIVEIS = { 1: 'Iniciante', 2: 'Intermediario', 3: 'Avancado' }
@@ -524,4 +687,5 @@ export const TIPOS = {
   projeto: 'Projeto',
   sql: 'SQL',
   entrevista: 'Entrevista',
+  cumulativo: 'Cumulativo',
 }

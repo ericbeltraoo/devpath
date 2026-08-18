@@ -78,6 +78,49 @@ function Conta() {
   )
 }
 
+function Disciplina() {
+  const { estado, setBloqueio, fila } = useApp()
+  const b = estado.bloqueio
+
+  return (
+    <div className="card">
+      <div className="card-title" style={{ marginBottom: 4 }}>Trava de conteúdo novo</div>
+      <div className="card-sub" style={{ marginBottom: 14 }}>
+        Quando a fila de revisões atrasadas passa do limite, o roadmap trava tópicos não concluídos. Você continua
+        podendo desmarcar (corrigir engano), mas não avançar.
+      </div>
+
+      <label className="topico" style={{ alignItems: 'center' }}>
+        <input type="checkbox" checked={b.ativo} onChange={(e) => setBloqueio({ ativo: e.target.checked })} />
+        <span>Manter a trava ativa</span>
+      </label>
+
+      {b.ativo ? (
+        <div className="field" style={{ marginTop: 12, maxWidth: 260 }}>
+          <label>Travar a partir de quantas atrasadas</label>
+          <input
+            type="number"
+            min="3"
+            max="100"
+            value={b.limite}
+            onChange={(e) => setBloqueio({ limite: Math.min(100, Math.max(3, Number(e.target.value) || 15)) })}
+          />
+          <span className="help">
+            Você tem {fila.vencidas.length} atrasada(s) agora.{' '}
+            {fila.vencidas.length >= b.limite ? 'A trava está ativa neste momento.' : 'Ainda abaixo do limite.'}
+          </span>
+        </div>
+      ) : (
+        <Callout tipo="warn" titulo="Você desligou o mecanismo que resolve o problema que relatou">
+          Sua queixa foi esquecer o conteúdo anterior. A trava existe exatamente para impedir que você acumule
+          material novo em cima de base esquecida. Desligada, o DevPath vira mais um checklist bonito — que é o
+          tipo de coisa que você já disse que não funciona.
+        </Callout>
+      )}
+    </div>
+  )
+}
+
 export default function Config() {
   const { estado, setEstado, setPerfil, resetar, nuvemAtiva } = useApp()
   const inputRef = useRef(null)
@@ -116,6 +159,8 @@ export default function Config() {
       <div style={{ marginTop: msg ? 14 : 0 }}>
         <Conta />
       </div>
+
+      <Disciplina />
 
       <div className="card">
         <div className="card-title" style={{ marginBottom: 14 }}>Perfil e plano</div>
