@@ -248,6 +248,35 @@ export function AppProvider({ children }) {
           revisoes: { ...e.revisoes, [chave]: reagendar(e.revisoes[chave], resultado) },
         })),
 
+      setCronograma: (parcial) =>
+        setEstado((e) => ({ ...e, cronograma: { ...e.cronograma, ...parcial } })),
+
+      addBloco: (bloco) =>
+        setEstado((e) => ({
+          ...e,
+          cronograma: {
+            ...e.cronograma,
+            blocos: [...e.cronograma.blocos, { ...bloco, id: 'bl-' + Math.random().toString(36).slice(2, 9) }],
+          },
+        })),
+
+      updBloco: (bloco) =>
+        setEstado((e) => ({
+          ...e,
+          cronograma: {
+            ...e.cronograma,
+            blocos: bloco.id
+              ? e.cronograma.blocos.map((b) => (b.id === bloco.id ? { ...b, ...bloco } : b))
+              : [...e.cronograma.blocos, { ...bloco, id: 'bl-' + Math.random().toString(36).slice(2, 9) }],
+          },
+        })),
+
+      delBloco: (id) =>
+        setEstado((e) => ({
+          ...e,
+          cronograma: { ...e.cronograma, blocos: e.cronograma.blocos.filter((b) => b.id !== id) },
+        })),
+
       setBloqueio: (parcial) =>
         setEstado((e) => ({ ...e, bloqueio: { ...e.bloqueio, ...parcial } })),
 

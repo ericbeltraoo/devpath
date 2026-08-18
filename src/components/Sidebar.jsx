@@ -9,6 +9,7 @@ const LINKS = [
     { to: '/', icone: '📊', texto: 'Painel', end: true },
     { to: '/revisao', icone: '🔁', texto: 'Revisao', badge: 'revisao' },
     { to: '/pomodoro', icone: '⏱️', texto: 'Pomodoro', badge: 'pomodoro' },
+    { to: '/cronograma', icone: '📅', texto: 'Cronograma' },
   ]},
   { grupo: 'Estudo', itens: [
     { to: '/plano', icone: '🗺️', texto: 'Meu plano' },

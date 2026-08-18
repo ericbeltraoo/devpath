@@ -17,6 +17,8 @@
 //              mercado. Este campo serve so para voce saber qual aula assistir.
 // ---------------------------------------------------------------------------
 
+import { TRILHA_INGLES } from './ingles'
+
 export const TRILHAS = [
   // =========================================================================
   // FUNDAMENTOS — base comum a qualquer area
@@ -1484,6 +1486,7 @@ for (Veiculo v : frota) {
       },
     ],
   },
+  TRILHA_INGLES,
 ]
 
 // ---------------------------------------------------------------------------

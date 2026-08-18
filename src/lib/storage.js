@@ -18,6 +18,11 @@ export const ESTADO_INICIAL = {
   notas: {}, // "moduloId" -> texto
   linkedin: { respostas: {}, historico: [] },
 
+  // Cronograma semanal: blocos de estudo por dia da semana.
+  cronograma: {
+    blocos: [], // { id, dia (0-6), materia, minutos, horario }
+  },
+
   // Trava de conteudo novo quando ha revisao atrasada demais.
   // Desligar e permitido, mas anula o motivo de existir do sistema.
   bloqueio: { ativo: true, limite: 15 },
@@ -55,6 +60,7 @@ export function normalizar(salvo) {
     },
     revisoes: salvo.revisoes || {},
     desafios: salvo.desafios || {},
+    cronograma: { blocos: salvo.cronograma?.blocos || [] },
   }
 }
 

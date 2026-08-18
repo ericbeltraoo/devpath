@@ -10,6 +10,7 @@ import Exercicios from './pages/Exercicios'
 import Desafios from './pages/Desafios'
 import Revisao from './pages/Revisao'
 import Pomodoro from './pages/Pomodoro'
+import Cronograma from './pages/Cronograma'
 import Entrevistas from './pages/Entrevistas'
 import Linkedin from './pages/Linkedin'
 import Avaliador from './pages/Avaliador'
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/revisao" element={<Revisao />} />
           <Route path="/pomodoro" element={<Pomodoro />} />
+          <Route path="/cronograma" element={<Cronograma />} />
           <Route path="/exercicios" element={<Exercicios />} />
           <Route path="/desafios" element={<Desafios />} />
           <Route path="/entrevistas" element={<Entrevistas />} />

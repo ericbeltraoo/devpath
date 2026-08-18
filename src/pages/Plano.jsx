@@ -60,6 +60,13 @@ export default function Plano() {
         </div>
       </div>
 
+      <Callout tipo="warn" titulo="Inglês não aparece aqui — de propósito">
+        Inglês não é uma fase que você termina antes do Java: é hábito diário e paralelo. Vinte minutos por dia
+        rendem mais que três horas no sábado. Por isso ele fica fora desta sequência e é agendado no{' '}
+        <Link to="/cronograma" style={{ fontWeight: 600 }}>Cronograma</Link>, todo dia, em bloco curto. O progresso
+        dele aparece no Roadmap, na aba 🇬🇧.
+      </Callout>
+
       <Callout titulo="Como ler este cronograma">
         As datas sao uma projecao a partir do seu ritmo, nao um prazo rigido. Se atrasar uma semana, nao refaca o
         plano — apenas continue. O que quebra o progresso e parar, nao atrasar.
