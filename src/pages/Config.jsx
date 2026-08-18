@@ -1,9 +1,11 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { OBJETIVOS } from '../lib/planner'
 import { exportar, importar } from '../lib/storage'
 import { configuracaoIncompleta } from '../lib/supabase'
-import { Callout } from '../components/ui'
+import { SECOES_NELIO, getSecao } from '../data/cursoNelio'
+import { planejarSincronizacao } from '../lib/sincronizarCurso'
+import { Callout, Bar } from '../components/ui'
 
 function Conta() {
   const { nuvemAtiva, usuario, sincronia, erroSync, ultimoSync, sincronizarAgora, baixarDaNuvem, sair } = useApp()
@@ -74,6 +76,116 @@ function Conta() {
         </button>
         <button className="btn ghost" onClick={sair}>Sair da conta</button>
       </div>
+    </div>
+  )
+}
+
+function SincronizarCurso() {
+  const { estado, sincronizarComCurso } = useApp()
+  const [secao, setSecao] = useState(estado.cursoSincronizado?.secao ?? 11)
+  const [aula, setAula] = useState(estado.cursoSincronizado?.aula ?? 10)
+  const [feito, setFeito] = useState(false)
+
+  const info = getSecao(secao)
+  const plano = useMemo(
+    () => planejarSincronizacao(secao, aula, info?.aulas || 1),
+    [secao, aula, info]
+  )
+
+  const jaMarcados = Object.keys(estado.topicos).length
+
+  return (
+    <div className="card">
+      <div className="card-title" style={{ marginBottom: 4 }}>Sincronizar com o curso do Nélio Alves</div>
+      <div className="card-sub" style={{ marginBottom: 14 }}>
+        Diga onde você está no curso e o sistema marca como concluído tudo que vem antes. Serve para você não
+        precisar clicar em 180 tópicos na mão — e para refazer conforme avança.
+      </div>
+
+      <div className="row" style={{ gap: 12, alignItems: 'flex-end' }}>
+        <div className="field" style={{ marginBottom: 0, flex: '1 1 240px', minWidth: 200 }}>
+          <label>Em que seção você está?</label>
+          <select value={secao} onChange={(e) => { setSecao(Number(e.target.value)); setAula(1); setFeito(false) }}>
+            {SECOES_NELIO.map((s) => (
+              <option key={s.n} value={s.n}>
+                {s.n}. {s.nome} ({s.aulas} aulas)
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field" style={{ marginBottom: 0, flex: '1 1 150px', minWidth: 140 }}>
+          <label>Qual aula da seção?</label>
+          <select value={aula} onChange={(e) => { setAula(Number(e.target.value)); setFeito(false) }}>
+            {Array.from({ length: info?.aulas || 1 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {i + 1} de {info?.aulas}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="callout" style={{ marginTop: 14 }}>
+        <b>O que vai acontecer</b>
+        {plano.totalTopicos} tópico(s) serão marcados como concluídos, em{' '}
+        {plano.completos.length} módulo(s) completo(s)
+        {plano.parciais.length > 0 ? ` e ${plano.parciais.length} parcial(is)` : ''}. As revisões ficam
+        escalonadas ao longo de <b>{plano.dias} dia(s)</b>, no máximo 5 por dia — se todas vencessem amanhã, a fila
+        estouraria o limite e travaria o seu roadmap no primeiro dia.
+      </div>
+
+      {plano.completos.length > 0 && (
+        <div style={{ marginTop: 12, maxHeight: 190, overflowY: 'auto' }}>
+          {plano.completos.map((m) => (
+            <div key={m.id} className="spread small" style={{ padding: '4px 0' }}>
+              <span style={{ color: 'var(--text-2)' }}>✓ {m.titulo}</span>
+              <span className="muted">S{m.curso.secao} · {m.topicos.length} tóp.</span>
+            </div>
+          ))}
+          {plano.parciais.map((p) => (
+            <div key={p.modulo.id} className="spread small" style={{ padding: '4px 0' }}>
+              <span style={{ color: 'var(--warn)' }}>◐ {p.modulo.titulo}</span>
+              <span className="muted">
+                S{p.modulo.curso.secao} · {p.quantos} de {p.modulo.topicos.length} tóp.
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {jaMarcados > 0 && (
+        <div className="small muted" style={{ marginTop: 10 }}>
+          Você já tem {jaMarcados} tópico(s) marcados. A sincronização <b>não desmarca nada</b> e não recria revisão
+          do que já existe.
+        </div>
+      )}
+
+      <div className="btn-row" style={{ marginTop: 14 }}>
+        <button
+          className="btn primary"
+          disabled={plano.totalTopicos === 0}
+          onClick={() => {
+            sincronizarComCurso({ ...plano, secao, aula })
+            setFeito(true)
+          }}
+        >
+          Marcar {plano.totalTopicos} tópico(s) como concluídos
+        </button>
+      </div>
+
+      {feito && (
+        <Callout tipo="ok" titulo="Sincronizado">
+          Progresso marcado e revisões escalonadas. Abra a aba <b>Revisão</b> — o que aparecer lá é o que você
+          declarou saber. Se travar em algo, era exatamente o que precisava voltar.
+        </Callout>
+      )}
+
+      {estado.cursoSincronizado && !feito && (
+        <div className="small muted" style={{ marginTop: 10 }}>
+          Última sincronização: seção {estado.cursoSincronizado.secao}, aula {estado.cursoSincronizado.aula} —{' '}
+          {new Date(estado.cursoSincronizado.em).toLocaleDateString('pt-BR')}
+        </div>
+      )}
     </div>
   )
 }
@@ -159,6 +271,8 @@ export default function Config() {
       <div style={{ marginTop: msg ? 14 : 0 }}>
         <Conta />
       </div>
+
+      <SincronizarCurso />
 
       <Disciplina />
 

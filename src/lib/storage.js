@@ -18,6 +18,9 @@ export const ESTADO_INICIAL = {
   notas: {}, // "moduloId" -> texto
   linkedin: { respostas: {}, historico: [] },
 
+  // Ultima sincronizacao com o curso: { secao, aula, em }
+  cursoSincronizado: null,
+
   // Cronograma semanal: blocos de estudo por dia da semana.
   cronograma: {
     blocos: [], // { id, dia (0-6), materia, minutos, horario }
@@ -61,6 +64,7 @@ export function normalizar(salvo) {
     revisoes: salvo.revisoes || {},
     desafios: salvo.desafios || {},
     cronograma: { blocos: salvo.cronograma?.blocos || [] },
+    cursoSincronizado: salvo.cursoSincronizado || null,
   }
 }
 

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { carregar, salvar, normalizar, temProgresso, ESTADO_INICIAL } from '../lib/storage'
 import { gerarPlano } from '../lib/planner'
 import { agendarPrimeira, reagendar, filaDeRevisao, avaliarBloqueio } from '../lib/revisao'
+import { aplicarSincronizacao } from '../lib/sincronizarCurso'
 import { TRILHAS, todosModulos } from '../data/tracks'
 import { nuvemAtiva, supabase, carregarNuvem, salvarNuvem } from '../lib/supabase'
 
@@ -247,6 +248,14 @@ export function AppProvider({ children }) {
           ...e,
           revisoes: { ...e.revisoes, [chave]: reagendar(e.revisoes[chave], resultado) },
         })),
+
+      // Marca de uma vez tudo que vem antes da aula atual do curso, com as
+      // revisoes escalonadas para nao travar o roadmap no dia seguinte.
+      sincronizarComCurso: (plano) =>
+        setEstado((e) => {
+          const { topicos, revisoes } = aplicarSincronizacao(plano, e.topicos, e.revisoes)
+          return { ...e, topicos, revisoes, cursoSincronizado: { secao: plano.secao, aula: plano.aula, em: new Date().toISOString() } }
+        }),
 
       setCronograma: (parcial) =>
         setEstado((e) => ({ ...e, cronograma: { ...e.cronograma, ...parcial } })),
