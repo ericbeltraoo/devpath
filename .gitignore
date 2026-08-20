@@ -10,5 +10,11 @@ dist-ssr
 .env.*
 !.env.example
 
-# Config local de ferramenta
-.claude
+# Config local de editor e ferramentas
+.vscode/
+.idea/
+.claude/
+*.swp
+
+# API
+servidor/node_modules

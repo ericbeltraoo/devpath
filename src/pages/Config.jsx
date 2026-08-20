@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { OBJETIVOS } from '../lib/planner'
 import { exportar, importar } from '../lib/storage'
-import { configuracaoIncompleta } from '../lib/supabase'
 import { SECOES_NELIO, getSecao } from '../data/cursoNelio'
 import { planejarSincronizacao } from '../lib/sincronizarCurso'
 import { Callout, Bar } from '../components/ui'
@@ -18,17 +17,10 @@ function Conta() {
           O app esta rodando em <b>modo local</b>: o progresso fica apenas neste navegador e nao sincroniza entre
           computadores.
         </div>
-        {configuracaoIncompleta && (
-          <Callout tipo="danger" titulo="Configuracao pela metade">
-            Uma das duas variaveis do Supabase foi encontrada e a outra nao, entao a sincronizacao ficou desligada.
-            Abra o console do navegador (F12) para ver qual esta faltando. Causa mais comum no Windows: o arquivo{' '}
-            <span className="mono">.env</span> foi salvo em UTF-8 <b>com BOM</b> — regrave como UTF-8 sem BOM.
-          </Callout>
-        )}
         <Callout tipo="warn" titulo="Como ativar a sincronizacao">
-          Crie o arquivo <span className="mono">.env</span> na raiz do projeto com as chaves do Supabase
-          (<span className="mono">VITE_SUPABASE_URL</span> e <span className="mono">VITE_SUPABASE_ANON_KEY</span>) e
-          reinicie o servidor. O passo a passo completo esta no README.
+          Defina <span className="mono">VITE_API_URL</span> no arquivo <span className="mono">.env</span> apontando para a
+          API (ex.: <span className="mono">https://estudo.lastweek.com.br</span>) e reinicie o servidor. O passo a
+          passo do deploy esta no README.
         </Callout>
       </div>
     )

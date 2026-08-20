@@ -4,7 +4,10 @@ import { gerarPlano } from '../lib/planner'
 import { agendarPrimeira, reagendar, filaDeRevisao, avaliarBloqueio } from '../lib/revisao'
 import { aplicarSincronizacao } from '../lib/sincronizarCurso'
 import { TRILHAS, todosModulos } from '../data/tracks'
-import { nuvemAtiva, supabase, carregarNuvem, salvarNuvem } from '../lib/supabase'
+import {
+  nuvemAtiva, carregarNuvem, salvarNuvem, renovarSessao,
+  sair as sairDaApi, definirCallbackDeslogar,
+} from '../lib/api'
 
 const Ctx = createContext(null)
 
@@ -28,26 +31,35 @@ export function AppProvider({ children }) {
 
   const userId = sessao?.user?.id ?? null
 
-  // Observa a sessao do Supabase
+  // Restaura a sessao no carregamento. O refresh token vive num cookie
+  // httpOnly, entao o JavaScript nao le nada — so pede a renovacao e recebe
+  // um access token novo se o cookie ainda for valido.
   useEffect(() => {
     if (!nuvemAtiva) return
-
     let vivo = true
 
-    supabase.auth.getSession().then(({ data }) => {
+    definirCallbackDeslogar(() => {
+      setSessao(null)
+      setDadosProntos(false)
+    })
+
+    renovarSessao().then((usuario) => {
       if (!vivo) return
-      setSessao(data.session ?? null)
+      setSessao(usuario ? { user: usuario } : null)
       setAuthPronta(true)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_evento, novaSessao) => {
-      setSessao(novaSessao ?? null)
-      setAuthPronta(true)
-    })
+    // Renova antes do access token de 15 min expirar, para nao interromper
+    // o uso no meio de uma sessao longa de estudo.
+    const timer = setInterval(() => {
+      renovarSessao().then((u) => {
+        if (vivo && u) setSessao({ user: u })
+      })
+    }, 12 * 60 * 1000)
 
     return () => {
       vivo = false
-      sub.subscription.unsubscribe()
+      clearInterval(timer)
     }
   }, [])
 
@@ -71,7 +83,7 @@ export function AppProvider({ children }) {
 
     ;(async () => {
       try {
-        const nuvem = await carregarNuvem(userId)
+        const nuvem = await carregarNuvem()
         if (!vivo) return
 
         const local = carregar()
@@ -85,7 +97,7 @@ export function AppProvider({ children }) {
         } else if (temProgresso(local)) {
           // Primeira vez nesta conta e ha progresso neste navegador: migra.
           setEstado(local)
-          await salvarNuvem(userId, local)
+          await salvarNuvem(local)
           if (!vivo) return
           setUltimoSync(new Date().toISOString())
           setSincronia('migrado')
@@ -129,7 +141,7 @@ export function AppProvider({ children }) {
     // reagenda com espera exponencial em vez de desistir na primeira.
     const tentar = async (tentativa) => {
       try {
-        await salvarNuvem(userId, estado)
+        await salvarNuvem(estado)
         setUltimoSync(new Date().toISOString())
         setSincronia('ok')
         setErroSync(null)
@@ -157,7 +169,7 @@ export function AppProvider({ children }) {
     if (!nuvemAtiva || !userId) return
     setSincronia('salvando')
     try {
-      await salvarNuvem(userId, estado)
+      await salvarNuvem(estado)
       setUltimoSync(new Date().toISOString())
       setSincronia('ok')
       setErroSync(null)
@@ -171,7 +183,7 @@ export function AppProvider({ children }) {
     if (!nuvemAtiva || !userId) return
     setSincronia('carregando')
     try {
-      const nuvem = await carregarNuvem(userId)
+      const nuvem = await carregarNuvem()
       if (nuvem) {
         pularSalvamento.current = true
         setEstado(normalizar(nuvem.dados))
@@ -188,11 +200,12 @@ export function AppProvider({ children }) {
     if (!nuvemAtiva) return
     clearTimeout(timer.current)
     try {
-      await salvarNuvem(userId, estado)
+      await salvarNuvem(estado)
     } catch {
       /* se falhar, o cache local ainda tem tudo */
     }
-    await supabase.auth.signOut()
+    await sairDaApi()
+    setSessao(null)
     usuarioCarregado.current = null
     setEstado({ ...ESTADO_INICIAL, perfil: { ...ESTADO_INICIAL.perfil } })
     setDadosProntos(false)

@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { supabase, traduzirErro } from '../lib/supabase'
+import { entrar, criarConta, traduzirErro, recuperacaoDisponivel } from '../lib/api'
 import { avaliarSenha, calcularEspera, formatarEspera, MIN_CARACTERES, TENTATIVAS_LIVRES } from '../lib/senha'
 
 const MODOS = {
   entrar: { titulo: 'Entrar', acao: 'Entrar', alt: 'Ainda nao tem conta? Criar uma' },
   criar: { titulo: 'Criar conta', acao: 'Criar conta', alt: 'Ja tem conta? Entrar' },
-  recuperar: { titulo: 'Recuperar senha', acao: 'Enviar link de recuperacao', alt: 'Voltar para o login' },
+  // 'recuperar' so volta quando houver servidor SMTP configurado.
+  recuperar: { titulo: 'Recuperar senha', acao: 'Enviar link', alt: 'Voltar para o login' },
 }
 
 // Guardado no navegador para que recarregar a pagina nao zere o bloqueio.
@@ -131,30 +132,27 @@ export default function Login() {
 
     try {
       if (modo === 'entrar') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
-        if (error) {
+        try {
+          await entrar(email, senha)
+        } catch (err) {
           // Falha de rede/servidor NAO conta como tentativa errada de senha —
           // senao uma oscilacao de internet tranca voce do lado de fora.
-          if (!ehFalhaDeRede(error)) registrarFalha()
-          throw error
+          if (!ehFalhaDeRede(err)) registrarFalha()
+          throw err
         }
         limparFalhas()
       } else if (modo === 'criar') {
-        const { error } = await supabase.auth.signUp({ email, password: senha })
-        if (error) throw error
-        // Mensagem identica exista ou nao a conta: nao revela quem tem cadastro.
-        setAviso(
-          'Se este email estiver disponivel, enviamos um link de confirmacao. ' +
-            'Verifique a caixa de entrada e o spam, confirme e depois entre.'
-        )
+        await criarConta(email, senha)
+        // Sem confirmacao por email neste servidor, a conta ja nasce ativa.
+        setAviso('Conta criada. Agora entre com o email e a senha que voce acabou de cadastrar.')
         setSenha('')
         setModo('entrar')
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + window.location.pathname,
-        })
-        if (error) throw error
-        setAviso('Se existir uma conta com esse email, o link de recuperacao chegou na caixa de entrada.')
+        // Sem servidor SMTP configurado, prometer email seria mentira.
+        setAviso(
+          'A recuperacao por email ainda nao esta ativa neste servidor. ' +
+            'Para redefinir a senha, e preciso faze-lo direto no banco.'
+        )
       }
     } catch (err) {
       setErro(traduzirErro(err))
@@ -259,7 +257,7 @@ export default function Login() {
             </button>
           </div>
 
-          {modo === 'entrar' && (
+          {modo === 'entrar' && recuperacaoDisponivel && (
             <div className="center">
               <button type="button" className="btn ghost sm" onClick={() => trocarModo('recuperar')}>
                 Esqueci minha senha

@@ -1,0 +1,50 @@
+# ===========================================================================
+# Servico da API do DevPath
+# ===========================================================================
+# Instalar:
+#   sudo cp devpath-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now devpath-api
+#
+# Escolhi systemd em vez de PM2 de proposito: ja existe na maquina, sobe no
+# boot sozinho, e nao adiciona mais um processo gerenciador consumindo RAM
+# numa VPS que ja hospeda outro projeto.
+#
+# Ver log:      sudo journalctl -u devpath-api -f
+# Reiniciar:    sudo systemctl restart devpath-api
+# ===========================================================================
+
+[Unit]
+Description=DevPath API (Node + MySQL)
+After=network.target mysql.service
+Wants=mysql.service
+
+[Service]
+Type=simple
+User=devpath
+Group=devpath
+WorkingDirectory=/opt/devpath/servidor
+EnvironmentFile=/opt/devpath/servidor/.env
+ExecStart=/usr/bin/node src/api.js
+
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=devpath-api
+
+# --------------------------------------------------------------- blindagem
+# Se a API for comprometida, estes limites reduzem o estrago: ela nao escreve
+# em lugar nenhum do disco, nao ganha privilegio novo e so enxerga /tmp proprio.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=300M
+
+[Install]
+WantedBy=multi-user.target
