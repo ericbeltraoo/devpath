@@ -7,6 +7,7 @@ import {
   ErroAuth, cadastrar, autenticar, gerarAccessToken, verificarAccessToken,
   emitirRefresh, rotacionarRefresh, revogar, revogarTodos,
 } from './auth.js'
+import { executarJava, montarArquivoDeTeste, interpretarSaida, dentroDoLimite, ErroExecucao } from './executar.js'
 
 const app = express()
 const PORTA = Number(process.env.PORT) || 3001
@@ -155,6 +156,44 @@ app.put('/api/progresso', protegido, rota(async (req, res) => {
   res.json({ atualizadoEm: new Date().toISOString() })
 }))
 
+// ============================================================ correcao
+
+// Executa o codigo do aluno junto com os testes do exercicio, no Judge0.
+// Nada roda nesta VPS: ver o comentario no topo de executar.js.
+app.post('/api/executar', protegido, rota(async (req, res) => {
+  const { codigo, testes, imports } = req.body || {}
+
+  if (typeof codigo !== 'string' || !codigo.trim()) {
+    return res.status(400).json({ erro: 'Cole o codigo antes de executar.', codigo: 'sem_codigo' })
+  }
+  if (typeof testes !== 'string' || !testes.trim()) {
+    return res.status(400).json({ erro: 'Este exercicio ainda nao tem testes automaticos.', codigo: 'sem_testes' })
+  }
+
+  const limite = dentroDoLimite(req.usuarioId)
+  if (!limite.ok) {
+    return res.status(429).json({
+      erro: `Limite de execucoes por hora atingido. Tente em ${limite.minutos} min.`,
+      codigo: 'limite_execucao',
+    })
+  }
+
+  const fonte = montarArquivoDeTeste(codigo, testes, Array.isArray(imports) ? imports : [])
+  const r = await executarJava(fonte)
+
+  if (r.erroCompilacao) {
+    return res.json({ compilou: false, erroCompilacao: r.erroCompilacao, restantes: limite.restantes })
+  }
+
+  res.json({
+    compilou: true,
+    ...interpretarSaida(r.saida),
+    erroExecucao: r.erroExecucao,
+    tempo: r.tempo,
+    restantes: limite.restantes,
+  })
+}))
+
 // ============================================================ saude
 
 app.get('/api/health', rota(async (_req, res) => {
@@ -167,6 +206,9 @@ app.get('/api/health', rota(async (_req, res) => {
 app.use((_req, res) => res.status(404).json({ erro: 'Rota nao encontrada.', codigo: 'nao_encontrado' }))
 
 app.use((err, _req, res, _next) => {
+  if (err instanceof ErroExecucao) {
+    return res.status(err.status).json({ erro: err.message, codigo: 'execucao' })
+  }
   if (err instanceof ErroAuth) {
     return res.status(err.status).json({ erro: err.message, codigo: err.codigo })
   }
