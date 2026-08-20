@@ -46,18 +46,74 @@ Crie o usuário do serviço (sem shell, sem home — ele só roda a API):
 sudo useradd --system --no-create-home --shell /usr/sbin/nologin devpath
 ```
 
-## 2. Banco
+## 2. Banco e credenciais
+
+### 2.1 Criar o schema
 
 ```bash
 sudo mysql < /opt/devpath/servidor/schema.sql
 ```
 
-> ⚠️ Antes de rodar, edite a última seção do `schema.sql` e troque
-> `TROQUE_ESTA_SENHA` pela senha real do usuário `devpath_app`.
+Isso cria o banco `devpath`, as 4 tabelas e o evento de limpeza.
+**Não cria usuário nem senha** — de propósito: senha em arquivo versionado é
+como se cria vazamento.
 
-O `schema.sql` cria o banco, as 4 tabelas, o evento de limpeza e um usuário
-**sem permissão de DROP nem ALTER** — se a API for comprometida, o atacante
-não destrói o schema.
+### 2.2 Gerar as credenciais NA VPS
+
+Este bloco gera a senha do banco e o segredo do JWT **dentro do servidor** e
+escreve direto no `.env`. Nenhum segredo passa por chat, email ou
+repositório, e nenhum deles aparece na tela:
+
+```bash
+cd /opt/devpath/servidor
+
+DB_PASS=$(openssl rand -base64 32 | tr -dc 'A-Za-z0-9' | head -c 28)
+JWT=$(openssl rand -base64 48)
+
+sudo mysql <<SQL
+CREATE USER IF NOT EXISTS 'devpath_app'@'localhost' IDENTIFIED BY '${DB_PASS}';
+ALTER USER 'devpath_app'@'localhost' IDENTIFIED BY '${DB_PASS}';
+GRANT SELECT, INSERT, UPDATE, DELETE ON devpath.* TO 'devpath_app'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+
+cat > .env <<EOF
+NODE_ENV=production
+PORT=3001
+CORS_ORIGIN=https://estudo.lastweek.com.br
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=devpath_app
+DB_PASSWORD=${DB_PASS}
+DB_NAME=devpath
+DB_POOL=5
+JWT_SECRET=${JWT}
+CADASTRO_ABERTO=true
+EOF
+
+sudo chown devpath:devpath .env && sudo chmod 600 .env
+unset DB_PASS JWT
+history -c
+```
+
+Confira que o usuário ficou com a permissão mínima:
+
+```bash
+sudo mysql -e "SHOW GRANTS FOR 'devpath_app'@'localhost';"
+```
+
+Deve aparecer apenas SELECT, INSERT, UPDATE e DELETE no banco devpath — sem
+`DROP`, sem `ALTER`, sem `ALL PRIVILEGES` e sem `*.*`.
+
+> ### Por que não reutilizar a senha do MySQL que você já tem
+>
+> A API **não deve** conectar com credencial administrativa. Se ela for
+> comprometida rodando como root, o atacante alcança todos os bancos da
+> máquina — inclusive o do lastweek.com.br. Um usuário dedicado, sem
+> `DROP` nem `ALTER`, limita o estrago ao banco do DevPath.
+>
+> O `chmod 600` no `.env` também importa: sem ele, qualquer usuário da VPS
+> lê a senha do banco e o segredo do JWT.
 
 ## 3. Código
 
@@ -73,17 +129,8 @@ cd /opt/devpath
 VITE_API_URL=https://estudo.lastweek.com.br
 ```
 
-**`/opt/devpath/servidor/.env`** (API):
-
-```bash
-cp servidor/.env.example servidor/.env
-openssl rand -base64 48   # cole em JWT_SECRET
-nano servidor/.env        # preencha DB_PASSWORD e JWT_SECRET
-sudo chown devpath:devpath servidor/.env && sudo chmod 600 servidor/.env
-```
-
-> O `chmod 600` importa: sem ele, qualquer usuário da máquina lê a senha do
-> banco e o segredo do JWT.
+O `servidor/.env` já foi criado no passo 2.2, com as credenciais geradas na
+própria VPS.
 
 ## 4. Serviço
 

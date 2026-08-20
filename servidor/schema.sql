@@ -125,18 +125,20 @@ CREATE EVENT limpar_dados_efemeros
 -- ---------------------------------------------------------------------------
 -- Usuario da aplicacao
 -- ---------------------------------------------------------------------------
--- A API NAO deve conectar como root. Troque a senha antes de rodar.
--- Repare que nao ha GRANT de DROP nem de ALTER: se a API for comprometida,
--- o atacante nao consegue destruir o schema.
+-- NAO criado aqui de proposito: senha em arquivo versionado e como se cria
+-- vazamento. O usuario e criado no deploy, com senha gerada NA PROPRIA VPS,
+-- que nunca passa por chat, email ou repositorio.
+--
+-- Ver deploy/README.md, secao "2. Banco".
+--
+-- A API nunca deve conectar como root. O usuario dela recebe apenas
+-- SELECT, INSERT, UPDATE e DELETE: sem DROP e sem ALTER, uma API
+-- comprometida nao destroi o schema nem alcanca outros bancos da maquina.
 -- ---------------------------------------------------------------------------
-CREATE USER IF NOT EXISTS 'devpath_app'@'localhost'
-  IDENTIFIED BY 'TROQUE_ESTA_SENHA';
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON devpath.* TO 'devpath_app'@'localhost';
-FLUSH PRIVILEGES;
 
 -- ---------------------------------------------------------------------------
 -- Conferencia
 -- ---------------------------------------------------------------------------
 -- SHOW TABLES FROM devpath;
 -- SHOW GRANTS FOR 'devpath_app'@'localhost';
+-- SELECT user, host FROM mysql.user WHERE user = 'devpath_app';
