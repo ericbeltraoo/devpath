@@ -3,9 +3,142 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { TRILHAS, getTrilha, todosModulos, horasTrilha } from '../data/tracks'
 import { progressoModulo } from '../lib/planner'
+import { EXERCICIOS_MODULO, NIVEIS_EX, idExercicio } from '../data/exerciciosModulos'
 import { Bar, ChipCurso, Callout } from '../components/ui'
 
-function Modulo({ modulo, aberto }) {
+
+function ExerciciosDoModulo({ modulo, modulos }) {
+  const { estado, setExercicio } = useApp()
+  const [aberto, setAberto] = useState(null)
+  const lista = EXERCICIOS_MODULO[modulo.id]
+  if (!lista?.length) return null
+
+  const feitos = lista.filter((_, i) => estado.exercicios[idExercicio(modulo.id, i + 1)] === 'feito').length
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div className="spread" style={{ marginBottom: 8 }}>
+        <div className="small" style={{ fontWeight: 650, color: 'var(--text-2)' }}>
+          ⌨️ Exercícios deste módulo ({feitos}/{lista.length})
+        </div>
+        {feitos === lista.length && <span className="chip ok">✓ todos resolvidos</span>}
+      </div>
+
+      {lista.map((ex) => {
+        const id = idExercicio(modulo.id, ex.nivel)
+        const status = estado.exercicios[id]
+        const n = NIVEIS_EX[ex.nivel]
+        const estaAberto = aberto === ex.nivel
+
+        // O que este exercicio obriga a puxar de modulos anteriores
+        const puxa = (ex.revisa || []).map((mid) => {
+          const m = modulos[mid]
+          const pct = m ? progressoModulo(m, estado.topicos).pct : 0
+          return { id: mid, titulo: m?.titulo || mid, pct, ok: pct >= 80 }
+        })
+
+        return (
+          <div
+            className="acc"
+            key={ex.nivel}
+            style={{ marginBottom: 6, borderColor: status === 'feito' ? 'rgba(34,197,94,.3)' : 'var(--border-soft)' }}
+          >
+            <div className="acc-head" style={{ padding: '10px 13px' }} onClick={() => setAberto(estaAberto ? null : ex.nivel)}>
+              <span
+                className="chip"
+                style={{ borderColor: n.cor, color: n.cor, flexShrink: 0 }}
+              >
+                {ex.nivel}. {n.nome}
+              </span>
+              <span style={{ flex: 1, fontSize: 13.8, fontWeight: 560, minWidth: 0 }}>{ex.titulo}</span>
+              <span className="chip">⏱ {ex.tempo}</span>
+              {puxa.length > 0 && (
+                <span className="chip" style={{ borderColor: 'var(--purple)', color: 'var(--purple)' }}>
+                  🔗 {puxa.length}
+                </span>
+              )}
+              {status === 'feito' && <span className="chip ok">✓</span>}
+              <span className="muted small">{estaAberto ? '▲' : '▼'}</span>
+            </div>
+
+            {estaAberto && (
+              <div className="acc-body" style={{ padding: '2px 13px 14px' }}>
+                <div className="small muted" style={{ marginTop: 12, fontStyle: 'italic' }}>{ex.contexto}</div>
+                <p style={{ marginTop: 8, fontSize: 13.8, lineHeight: 1.6 }}>{ex.enunciado}</p>
+
+                {puxa.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 12, padding: 11, borderRadius: 'var(--r-sm)',
+                      background: 'rgba(167,139,250,.07)', border: '1px solid rgba(167,139,250,.25)',
+                    }}
+                  >
+                    <div className="small" style={{ fontWeight: 640, marginBottom: 6 }}>
+                      🔗 Você vai precisar reusar
+                    </div>
+                    {puxa.map((r) => (
+                      <div key={r.id} className="spread small" style={{ padding: '3px 0' }}>
+                        <span style={{ color: r.ok ? 'var(--text-2)' : 'var(--warn)' }}>
+                          {r.ok ? '✓' : '○'} {r.titulo}
+                        </span>
+                        <span className="muted">{r.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <h4 style={{ margin: '14px 0 6px', fontSize: 13, color: 'var(--text-2)' }}>Requisitos</h4>
+                <ul className="lista-simples">
+                  {ex.requisitos.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+
+                <h4 style={{ margin: '14px 0 6px', fontSize: 13, color: 'var(--ok)' }}>Critérios de aceite</h4>
+                <ul className="lista-simples lista-ok">
+                  {ex.criteriosAceite.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+
+                {ex.dicas?.length > 0 && <DicasExercicio dicas={ex.dicas} />}
+
+                <div className="btn-row" style={{ marginTop: 14 }}>
+                  <button
+                    className={`btn sm${status === 'fazendo' ? ' primary' : ''}`}
+                    onClick={() => setExercicio(id, status === 'fazendo' ? null : 'fazendo')}
+                  >
+                    Estou fazendo
+                  </button>
+                  <button
+                    className={`btn sm${status === 'feito' ? ' primary' : ''}`}
+                    onClick={() => setExercicio(id, status === 'feito' ? null : 'feito')}
+                  >
+                    ✓ Resolvido
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function DicasExercicio({ dicas }) {
+  const [ver, setVer] = useState(false)
+  return (
+    <div style={{ marginTop: 14 }}>
+      <button className="btn sm ghost" onClick={() => setVer((v) => !v)}>
+        💡 {ver ? 'Esconder dicas' : `Ver dicas (${dicas.length})`}
+      </button>
+      {ver && (
+        <ul className="lista-simples" style={{ marginTop: 8 }}>
+          {dicas.map((d, i) => <li key={i}>{d}</li>)}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function Modulo({ modulo, aberto, modulos }) {
   const { estado, toggleTopico, marcarModulo, setNota, bloqueio } = useApp()
   const p = progressoModulo(modulo, estado.topicos)
   const [notaAberta, setNotaAberta] = useState(false)
@@ -115,6 +248,8 @@ function Modulo({ modulo, aberto }) {
         </div>
       )}
 
+      <ExerciciosDoModulo modulo={modulo} modulos={modulos} />
+
       {modulo.entregavel && (
         <div className="entregavel">
           <b>Entregavel: </b>
@@ -167,6 +302,12 @@ export default function Roadmap() {
       if (f) setAbertas((s) => new Set([...s, f.id]))
     }
   }, [faseParam, moduloParam, trilha])
+
+  const modulos = useMemo(() => {
+    const mapa = {}
+    TRILHAS.forEach((t) => todosModulos(t).forEach((m) => { mapa[m.id] = m }))
+    return mapa
+  }, [])
 
   const resumo = useMemo(() => {
     const mods = todosModulos(trilha)
@@ -260,7 +401,7 @@ export default function Roadmap() {
             {aberta && (
               <div className="fase-body">
                 {mods.map((m) => (
-                  <Modulo key={m.id} modulo={m} aberto={moduloParam === m.id} />
+                  <Modulo key={m.id} modulo={m} aberto={moduloParam === m.id} modulos={modulos} />
                 ))}
               </div>
             )}
