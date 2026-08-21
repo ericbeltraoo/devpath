@@ -342,7 +342,7 @@ export default function Config() {
       <div className="card">
         <div className="card-title" style={{ marginBottom: 10 }}>Sobre este sistema</div>
         <p className="small muted">
-          DevPath e um projeto React + Vite{nuvemAtiva ? ', com Supabase (Postgres + Auth) para login e sincronizacao' : ''}.
+          DevPath e um projeto React + Vite{nuvemAtiva ? ', com API propria em Node + MySQL para login e sincronizacao' : ''}.
           Todo o conteudo (trilhas, exercicios, perguntas e criterios do avaliador) vive em arquivos de dados em{' '}
           <span className="mono">src/data/</span> — voce pode editar, adicionar modulos e ajustar o roadmap ao seu
           ritmo sem mexer em nenhum componente.

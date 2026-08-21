@@ -3,8 +3,9 @@
 // ---------------------------------------------------------------------------
 // Isto e uma barreira de UX, nao de seguranca: roda no navegador e um atacante
 // simplesmente nao usa a nossa tela. O valor real e impedir que VOCE escolha
-// uma senha ruim. A protecao de verdade (hash, rate limit, checagem de senha
-// vazada) acontece no servidor do Supabase.
+// uma senha ruim. A protecao de verdade (bcrypt e o limite de tentativas por
+// email/IP gravado no banco) acontece na API, em servidor/src/auth.js — e a
+// MESMA politica e revalidada la, porque a API pode ser chamada direto.
 // ---------------------------------------------------------------------------
 
 // As senhas mais usadas do mundo + variacoes obvias em portugues.
@@ -96,7 +97,7 @@ export function avaliarSenha(senha, email = '') {
 // ---------------------------------------------------------------------------
 // Depois de 3 erros, cada nova tentativa espera o dobro da anterior, ate 5 min.
 // De novo: e defesa contra forca bruta pela NOSSA tela, e contra voce mesmo
-// martelando o botao. O bloqueio que conta e o do servidor do Supabase.
+// martelando o botao. O bloqueio que conta e o da API: 8 falhas em 15 min.
 // ---------------------------------------------------------------------------
 
 export const TENTATIVAS_LIVRES = 3

@@ -7,18 +7,25 @@ preparação para entrevistas e um avaliador de perfil do LinkedIn.
 
 ## Stack
 
-React 18 + Vite + React Router, com **Supabase** (Postgres + Auth) para login e sincronização.
+| Parte | O que é |
+|---|---|
+| Frontend | React 18 + Vite + React Router (HashRouter), estático |
+| API | Node + Express, em `servidor/` |
+| Banco | MySQL |
+| Autenticação | Própria: bcrypt + JWT curto + refresh token em cookie `httpOnly` |
+| Hospedagem | VPS Hostinger, em `estudo.lastweek.com.br` |
 
-O app tem dois modos, decididos automaticamente:
+O app tem dois modos, decididos automaticamente pela variável `VITE_API_URL`:
 
-- **Modo nuvem** — com as variáveis do Supabase definidas: login por email/senha e progresso sincronizado entre dispositivos.
-- **Modo local** — sem as variáveis: funciona normalmente, mas o progresso fica só naquele navegador.
+- **Modo nuvem** — com a variável definida: login por email/senha e progresso sincronizado entre dispositivos.
+- **Modo local** — sem a variável: funciona por inteiro, mas o progresso fica só naquele navegador.
 
-Em ambos os modos o `localStorage` é usado como cache, então o app continua utilizável offline e as alterações sobem quando a conexão volta.
+Em ambos os modos o `localStorage` é usado como cache, então o app continua utilizável offline
+e as alterações sobem quando a conexão volta.
 
-## Rodando
+## Rodando na sua máquina
 
-Pré-requisito: **Node.js 18+**.
+Pré-requisito: **Node.js 20+**.
 
 ```bash
 npm install
@@ -28,7 +35,8 @@ npm install
 npm run dev
 ```
 
-Abre em `http://localhost:5173`.
+Abre em `http://localhost:5173`. Sem `.env`, roda em modo local — que é o suficiente para
+desenvolver qualquer tela que não seja login.
 
 Para gerar a versão de produção:
 
@@ -36,83 +44,27 @@ Para gerar a versão de produção:
 npm run build
 ```
 
-## Configurando o Supabase (login + sincronização)
+### Subindo a API junto (opcional)
 
-**1. Crie o projeto**
-
-Em [supabase.com](https://supabase.com) → *New project*. Escolha a região `South America (São Paulo)` e guarde a senha do banco.
-
-**2. Crie a tabela**
-
-No painel, abra **SQL Editor** → *New query*, cole o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
-
-**3. Pegue as chaves**
-
-Em **Project Settings → API**, copie `Project URL` e a chave `anon public`.
-
-> ⚠️ Use apenas a chave **anon / public**. A `service_role` ignora as regras de segurança e nunca deve ir para o frontend.
-
-**4. Crie o `.env`**
-
-Copie `.env.example` para `.env` e preencha:
-
-```
-VITE_SUPABASE_URL=https://seu-projeto.supabase.co
-VITE_SUPABASE_ANON_KEY=sua-chave-anon
-```
-
-Reinicie o `npm run dev` — o Vite só lê o `.env` na inicialização.
-
-**5. Ajuste a confirmação de email**
-
-Em **Authentication → Providers → Email**, decida se quer *Confirm email* ligado. Ligado é mais seguro; desligado deixa o cadastro instantâneo (aceitável para uso pessoal).
-
-## Segurança
-
-O checklist completo — o que já está feito no código e o que você precisa configurar nos painéis — está em **[SEGURANCA.md](SEGURANCA.md)**.
-
-Leia antes de publicar. O item mais importante: **crie sua conta antes de fechar o cadastro público**, ou você fica trancado do lado de fora.
-
-## Publicando no GitHub Pages
-
-O workflow já está pronto em `.github/workflows/deploy.yml`. Ele builda e publica a cada push na `main`.
-
-**1. Suba o repositório** (público — o Pages gratuito não serve repositório privado):
+Só é necessário para mexer em login ou sincronização. Exige um MySQL acessível.
 
 ```bash
-git remote add origin https://github.com/SEU-USUARIO/devpath.git; git push -u origin main
+cd servidor && npm install && npm run dev
 ```
 
-**2. Ative o Pages:** *Settings → Pages → Source: **GitHub Actions***.
+O schema fica em [`servidor/schema.sql`](servidor/schema.sql). Ele **não** cria usuário nem senha
+de banco de propósito — credencial não mora em arquivo versionado.
 
-**3. Cadastre as chaves:** *Settings → Secrets and variables → Actions → New repository secret*, uma de cada vez:
+## Colocando no ar
 
-| Nome | Valor |
-|---|---|
-| `VITE_SUPABASE_URL` | `https://SEU-PROJETO.supabase.co` |
-| `VITE_SUPABASE_ANON_KEY` | sua chave **anon / public** |
+O guia completo é o **[deploy/README.md](deploy/README.md)**: 8 fases, da VPS limpa ao HTTPS
+funcionando, incluindo Nginx, systemd e certbot.
 
-Sem esses secrets o site sobe, mas em **modo local**: sem login e sem sincronização. O workflow avisa isso no log.
+Leia também o **[SEGURANCA.md](SEGURANCA.md)** antes de publicar. O item que mais importa:
+**crie sua conta antes de fechar o cadastro público**, ou você fica trancado do lado de fora.
 
-**4. Empurre qualquer commit** (ou rode o workflow na mão pela aba *Actions*). A URL final é `https://SEU-USUARIO.github.io/devpath/`.
-
-**5. No Supabase**, em *Authentication → URL Configuration*, coloque essa URL em **Site URL** e em **Redirect URLs**. Sem isso o link de recuperação de senha aponta para `localhost`.
-
-### O que o Pages não faz
-
-O GitHub Pages não permite cabeçalhos HTTP próprios. Consequências reais:
-
-- **HSTS** não se aplica (o Pages já força HTTPS, então o impacto é pequeno)
-- **`frame-ancestors`** não se aplica — o site pode ser embutido em iframe por terceiros (clickjacking)
-
-O que dá para cobrir por `<meta>` já está no `index.html`: CSP de scripts, estilos, imagens e conexões. Se um dia isso incomodar, o `vercel.json` deste repositório já aplica tudo — é só importar o projeto na Vercel sem mudar nada no código.
-
-### Repositório público: o que muda
-
-- Todo o código fica visível. **Isso é uma vantagem**: vira portfólio. Um sistema real, usado por você, com autenticação, RLS, CI e deploy — vale mais numa entrevista que dez projetos de tutorial.
-- A chave `anon` aparece no JavaScript publicado. **Correto e esperado** — ela é pública por design, e quem protege os dados é o RLS no banco.
-- Seu email de commit fica visível. Para esconder: *GitHub → Settings → Emails → Keep my email addresses private*, e depois `git config user.email SEU_ID+usuario@users.noreply.github.com`.
-- **Feche o cadastro no Supabase** depois de criar sua conta. Com a URL pública, qualquer pessoa que a encontre pode criar conta enquanto o signup estiver aberto.
+> A `vercel.json` na raiz existe caso um dia você queira o frontend na Vercel. Ela sozinha não
+> resolve login: a Vercel não hospeda MySQL, e a API precisaria ser portada para serverless.
 
 ## Usando no celular
 
@@ -121,72 +73,99 @@ O app é responsivo e pode ser instalado como aplicativo:
 - **Android (Chrome):** menu ⋮ → *Adicionar à tela inicial*
 - **iPhone (Safari):** botão compartilhar → *Adicionar à Tela de Início*
 
-Instalado, ele abre em tela cheia, sem barra de navegador. O progresso é o mesmo do computador — é a mesma conta.
+Instalado, abre em tela cheia, sem barra de navegador. O progresso é o mesmo do computador —
+é a mesma conta.
 
-Uma limitação honesta do iPhone: as **notificações do Pomodoro** só funcionam com o app adicionado à tela de início, e ainda assim o iOS é restritivo. O alarme sonoro funciona nos dois sistemas, desde que a aba esteja aberta.
+Uma limitação honesta do iPhone: as **notificações do Pomodoro** só funcionam com o app
+adicionado à tela de início, e ainda assim o iOS é restritivo. O alarme sonoro funciona nos
+dois sistemas, desde que a aba esteja aberta.
+
+## Como a autenticação funciona
+
+- Senha guardada com **bcrypt** (custo 12), nunca em texto.
+- Login devolve um **access token JWT de 15 min**, que fica **em memória** no frontend — não
+  no `localStorage`, onde um XSS o leria.
+- O **refresh token** (30 dias) vai em cookie `httpOnly`, `secure`, `sameSite=strict`, e é
+  guardado no banco como hash SHA-256. O JavaScript da página nunca o enxerga.
+- Refresh **rotaciona**: cada uso emite um token novo e invalida o anterior. Se um token já
+  usado reaparecer, todas as sessões daquele usuário são revogadas — é o sinal clássico de
+  token roubado.
+- Tentativas de login são limitadas **no banco** (8 falhas / 15 min, por email ou IP).
+  No banco, e não em memória, para o limite sobreviver a reinício do processo.
+
+O MySQL não tem Row Level Security. O isolamento entre usuários é garantido pela API, que
+**sempre** filtra por `usuario_id` vindo do token — nunca de um parâmetro da requisição.
 
 ## Como a sincronização funciona
 
-O estado inteiro do app é gravado como uma linha `JSONB` por usuário na tabela `progresso`. Escolha deliberada: o formato do progresso muda toda vez que um módulo novo entra no roadmap, e com JSONB isso não exige migration.
+O estado inteiro do app é gravado como uma linha JSON por usuário na tabela `progresso`.
+Escolha deliberada: o formato do progresso muda toda vez que um módulo novo entra no roadmap,
+e assim isso não exige migration.
 
-- Toda alteração salva no `localStorage` imediatamente e sobe para a nuvem após 1,2s de inatividade (*debounce*).
-- No primeiro login em uma conta nova, o progresso que já existia naquele navegador é **migrado automaticamente** para a conta.
-- Ao entrar em uma conta que já tem dados, **a nuvem vence** — o que estiver no navegador é substituído.
-- A resolução de conflito é *last-write-wins*. Se você usar dois computadores ao mesmo tempo, sem recarregar, o último a salvar sobrescreve o outro. Para uso pessoal isso é suficiente; em *Configurações → Conta* existem os botões **Enviar agora** e **Baixar da nuvem** para forçar a direção.
-
-A segurança fica no banco, não no frontend: a tabela tem **Row Level Security** com políticas que restringem cada operação a `auth.uid() = user_id`. Mesmo com a chave pública em mãos, ninguém lê o progresso de outra pessoa.
+- Toda alteração salva no `localStorage` imediatamente e sobe para a API após 1,2s de
+  inatividade (*debounce*), com até 5 reenvios em espera exponencial.
+- No primeiro login em uma conta nova, o progresso que já existia naquele navegador é
+  **migrado automaticamente** para a conta.
+- Ao entrar em uma conta que já tem dados, **a nuvem vence** — o que estiver no navegador é
+  substituído.
+- A resolução de conflito é *last-write-wins*. Se você usar dois computadores ao mesmo tempo,
+  sem recarregar, o último a salvar sobrescreve o outro. Para uso pessoal é suficiente; em
+  *Configurações → Conta* existem **Enviar agora** e **Baixar da nuvem** para forçar a direção.
+- Limites da API: 500 KB de progresso por usuário e 60 gravações por minuto.
 
 ## O que tem dentro
 
 | Página | O que faz |
 |---|---|
 | **Painel** | Progresso geral, próximo passo, previsão de conclusão, progresso por trilha |
-| **Meu plano** | Cronograma semana a semana, gerado a partir do objetivo + horas/semana + o que você já concluiu |
-| **Roadmap** | 5 trilhas → fases → módulos → tópicos marcáveis, com entregável e recursos por módulo |
-| **Exercícios** | Enunciado, requisitos, critérios de aceite e dicas (reveláveis) |
+| **Revisão** | Fila de revisão espaçada; bloqueia conteúdo novo quando a dívida passa do limite |
+| **Pomodoro** | Blocos de foco configuráveis, alarme, notificação, tempo contabilizado por módulo |
+| **Cronograma** | Blocos de estudo por dia da semana, com matéria e tempo mínimo |
+| **Meu plano** | Semana a semana, gerado do objetivo + horas/semana + o que você já concluiu |
+| **Roadmap** | Trilhas → fases → módulos → tópicos, com entregável, recursos e 3 exercícios por módulo |
+| **Exercícios** | Enunciado, requisitos, critérios de aceite, dicas reveláveis e cronômetro |
+| **Desafios** | Projetos maiores, de portfólio |
 | **Entrevistas** | Etapas do processo, banco de perguntas com resposta modelo, método STAR, checklist |
-| **LinkedIn** | Tutorial de 9 seções com exemplos bom / mediano / fraco |
-| **Avaliador** | 29 critérios ponderados → nota 0–100, nota por seção e plano de ação priorizado |
+| **LinkedIn** | Tutorial com exemplos bom / mediano / fraco |
+| **Avaliador** | Critérios ponderados → nota 0–100, nota por seção e plano de ação priorizado |
 | **Configurações** | Conta, status de sincronização, backup em `.json`, reset |
 
 ## Trilhas
 
 - 🧱 **Fundamentos de Engenharia** — Git, terminal, HTTP, algoritmos, Clean Code, SOLID, testes, Agile
-- ☕ **Java + Spring Boot** — do básico ao deploy, alinhada com o curso do Nélio Alves
+- ☕ **Java + Spring Boot** — na ordem do curso do Nélio Alves, não numa ordem inventada
 - 🅰️ **Angular** — HTML/CSS/JS/TS até RxJS, Signals e testes
-- 🗄️ **Banco de Dados** — modelagem, SQL de entrevista, índices, transações, PostgreSQL
+- 🗄️ **Banco de Dados** — modelagem, SQL de entrevista, índices, transações
 - ☁️ **AWS & Cloud** — IAM, EC2, S3, RDS, Lambda, ECS, observabilidade, certificação CLF-C02
+- 🌍 **Inglês** — do básico ao avançado, técnico e conversação (trilha paralela, fora da sequência)
 
 ## Editando o conteúdo
 
 Todo o conteúdo vive em `src/data/` — nenhum componente precisa ser tocado para mudar o roadmap:
 
-- `tracks.js` — trilhas, fases, módulos, tópicos, entregáveis e links
-- `exercises.js` — exercícios
-- `interview.js` — etapas, perguntas, método STAR, checklist
-- `linkedin.js` — tutorial e critérios do avaliador (com os pesos)
+| Arquivo | Conteúdo |
+|---|---|
+| `tracks.js` | Trilhas, fases, módulos, tópicos, entregáveis e links |
+| `ingles.js` | Trilha de inglês |
+| `exerciciosModulos.js` | Índice dos 3 exercícios por módulo (fontes em `exercicios/`) |
+| `exercises.js` | Exercícios da aba Exercícios |
+| `desafios.js` | Projetos de portfólio |
+| `interview.js` | Etapas, perguntas, método STAR, checklist |
+| `linkedin.js` | Tutorial e critérios do avaliador, com os pesos |
+| `cursoNelio.js` | Grade do curso, usada para marcar onde você está |
 
 A ordem pedagógica do plano (qual fase vem antes de qual) fica em `src/lib/planner.js`,
 no objeto `OBJETIVOS`.
 
-> ⚠️ Não renomeie os `id` dos módulos: eles são a chave do progresso salvo.
+> ⚠️ Não renomeie os `id` dos módulos nem dos exercícios: eles são a chave do progresso salvo.
 
 ## Backup
 
-`Configurações → Exportar progresso` gera um `.json`. Em modo nuvem isso é opcional (o banco já é o backup),
-mas continua útil para guardar um ponto no tempo ou levar o progresso para outra conta.
-
-## Alternativa: Vercel ou Netlify
-
-Se um dia quiser repositório privado ou os cabeçalhos de segurança completos, o `vercel.json` já está pronto:
-importe o repositório em [vercel.com](https://vercel.com), cadastre as duas variáveis em *Environment Variables*
-e faça o deploy. Nada muda no código — o `VITE_BASE` só é usado pelo workflow do Pages.
-
-> ⚠️ Variáveis `VITE_` são embutidas **no build**. Se você adicioná-las depois do primeiro deploy, precisa
-> mandar um *Redeploy*, senão o site continua em modo local.
+`Configurações → Exportar progresso` gera um `.json`. Em modo nuvem é opcional (o banco já é o
+backup), mas continua útil para guardar um ponto no tempo ou levar o progresso para outra conta.
 
 ## Próximo passo planejado
 
-Quando a fase **Spring Boot** do roadmap estiver concluída, trocar o Supabase por uma API REST própria
-em Java + Spring Security + JWT + Postgres, mantendo este frontend como cliente.
+Quando a fase **Spring Boot** do roadmap estiver concluída, reescrever `servidor/` em
+Java + Spring Security + JWT, mantendo o mesmo contrato HTTP e este frontend como cliente.
 O sistema passa a ser o projeto de portfólio.

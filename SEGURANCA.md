@@ -1,118 +1,187 @@
 # Segurança — checklist antes e depois de publicar
 
-Marque conforme for fazendo. Os itens de **código** já estão prontos; os de **painel** só você pode executar, porque exigem login nas suas contas.
+Marque conforme for fazendo. Os itens de **código** já estão prontos; os de **servidor** só você
+pode executar, porque exigem acesso à VPS.
 
-> **Decisão de escopo:** o DevPath é um **sistema pessoal, de usuário único**. O cadastro público fica **fechado** depois que você criar sua conta. Isso elimina de uma vez a maior parte da superfície de ataque — sem cadastro aberto não há criação de contas em massa, mineração de emails nem estouro da cota de envio. Se um dia você abrir para outras pessoas, releia a seção "Se abrir para outros usuários" no fim.
+> **Decisão de escopo:** o DevPath é um **sistema pessoal, de usuário único**. O cadastro nasce
+> **fechado** e só abre por variável de ambiente. Isso elimina de uma vez a maior parte da
+> superfície de ataque. Se um dia abrir para outras pessoas, leia "Se abrir para outros usuários"
+> no fim.
+
+## O que mudou: agora a senha é sua responsabilidade
+
+Antes o login era do Supabase, e este documento dizia que você não guardava senha em lugar
+nenhum. **Isso deixou de ser verdade.** A autenticação agora é própria, e o hash da senha mora
+na sua tabela `usuarios`, no seu MySQL, na sua VPS.
+
+Consequências práticas, sem rodeio:
+
+- **Se o banco vazar, o material vaza com ele.** São hashes bcrypt com custo 12, não texto —
+  quebrar isso é caro. Mas "caro" não é "impossível", e não é mais problema de outra empresa.
+- **Backup do banco é dado sensível.** Um `mysqldump` no `/tmp` com permissão frouxa é um
+  arquivo de senhas esperando.
+- **Você é o time de segurança agora.** Não existe mais um painel de terceiro aplicando limites
+  por você. Tudo que este documento lista precisa estar no seu código ou na sua VPS.
+
+Foi a troca certa — você deixa de depender de serviço externo e ganha o projeto de portfólio —
+mas é uma troca, não um upgrade grátis.
 
 ## Como a autenticação funciona
 
-Você não guarda senha em lugar nenhum. O fluxo é:
+1. O formulário manda email e senha por HTTPS para a **sua** API.
+2. A API valida a política de senha **de novo** no servidor e grava o hash **bcrypt custo 12**.
+   Validar só no cliente não é validar: a API pode ser chamada direto com `curl`.
+3. O login devolve um **access token JWT de 15 minutos**, que o frontend guarda **em memória** —
+   não no `localStorage`, onde um XSS o leria.
+4. O **refresh token** (30 dias) vai em cookie `httpOnly`, `secure`, `sameSite=strict`, com
+   `path=/api/auth`. O JavaScript da página nunca o enxerga.
+5. No banco o refresh é guardado como **hash SHA-256**. Banco vazado não entrega token usável.
+6. Cada refresh **rotaciona**: emite um novo e invalida o anterior. Se um token já usado
+   reaparecer, **todas** as sessões daquele usuário são revogadas — é a assinatura de token roubado.
 
-1. O formulário manda email e senha por HTTPS direto para o Supabase Auth
-2. O Supabase gera o hash da senha com **bcrypt** e guarda só o hash, num schema (`auth`) que a chave pública não alcança
-3. Na volta vem um **JWT de vida curta** mais um refresh token com rotação automática
-4. Toda requisição ao banco leva esse JWT, e o Postgres aplica o RLS em cima do `auth.uid()` que vem dentro dele
-
-O app nunca vê, nunca registra e nunca armazena a senha. Não existe "banco de senhas" seu para vazar.
-
-## Entendendo as duas chaves
-
-Isto é a fonte da maioria dos vazamentos em projeto com Supabase:
-
-| Chave | Onde pode aparecer | O que faz |
-|---|---|---|
-| `anon` / `public` | No navegador, no bundle, no GitHub. **É pública por design.** | Não dá acesso a nada sozinha. Toda requisição ainda passa pelo RLS. |
-| `service_role` | **Somente em servidor.** Nunca no frontend, nunca no `.env` deste projeto. | **Ignora o RLS por completo.** Quem tem essa chave lê e apaga os dados de todo mundo. |
-
-Se a chave `anon` vazar, não aconteceu nada — ela é servida para qualquer visitante de qualquer forma. Se a `service_role` vazar, o banco inteiro está comprometido. Este projeto nunca usa a segunda.
+O MySQL **não tem Row Level Security**. O isolamento entre contas depende inteiramente de a API
+filtrar por `usuario_id` extraído do token, nunca de parâmetro da requisição. É uma linha de
+código em [`api.js`](servidor/src/api.js) separando você de um vazamento — por isso ela está
+comentada lá, e por isso nenhuma rota nova deve aceitar id de usuário vindo do cliente.
 
 ## Código — já feito
 
-- [x] **RLS ligado** com policies `auth.uid() = user_id` em SELECT, INSERT, UPDATE e DELETE — a regra vive no banco, não no frontend
-- [x] **Papel `anon` sem permissão** na tabela (defesa em profundidade, caso uma policy futura saia errada)
-- [x] **Trigger de validação**: limite de 500 KB por usuário, `dados` obrigatoriamente objeto JSON, `atualizado_em` carimbado pelo servidor
-- [x] **`.env` no `.gitignore`** (com exceção explícita para o `.env.example`)
-- [x] **Headers HTTP** em `vercel.json`: CSP, HSTS, `X-Frame-Options: DENY`, `nosniff`, Referrer-Policy, Permissions-Policy
-- [x] **CSP em `<meta>`** no `index.html` como rede de segurança para hosts sem cabeçalhos próprios (GitHub Pages). Cobre script, style, img e connect; **não** cobre `frame-ancestors` nem HSTS, que só funcionam como cabeçalho HTTP
-- [x] **`X-Robots-Tag: noindex`** — é um sistema pessoal, não precisa aparecer no Google
+- [x] **Senha com bcrypt custo 12**, nunca em texto, nunca em log
+- [x] **Política de senha aplicada no servidor também** — mínimo 10 caracteres, 3 dos 4 tipos,
+      bloqueio de senhas comuns, de repetições e de senha contendo o próprio email
+- [x] **Access token curto em memória**, refresh em cookie `httpOnly` + `sameSite=strict`
+- [x] **Refresh guardado como hash**, com rotação e revogação em massa na reutilização
+- [x] **`JWT_SECRET` obrigatório com 32+ caracteres** — a API se recusa a subir sem ele.
+      Falhar na subida é melhor que rodar inseguro sem ninguém perceber
+- [x] **Limite de tentativas no servidor** — 8 falhas em 15 min, por email **ou** IP, contadas
+      **no banco**. No banco, e não em memória, para sobreviver a reinício do processo
+- [x] **Comparação em tempo constante-ish** — email inexistente ainda paga o custo de um bcrypt
+      contra hash falso, para o tempo de resposta não denunciar quais emails existem
+- [x] **Mensagens sem enumeração de usuários** — login errado e cadastro duplicado devolvem
+      textos que não revelam se aquele email tem conta
+- [x] **Cadastro fechado por padrão** — só abre com `CADASTRO_ABERTO=true` no `.env`
+- [x] **Backoff no formulário de login** — usabilidade, não segurança (veja a tabela adiante).
+      Falha de **rede** não conta como tentativa errada
+- [x] **`usuario_id` sempre do token**, nunca do corpo ou da URL
+- [x] **Limite de 500 KB e 60 gravações/min por usuário**, recalculado no servidor
+- [x] **Reenvio com espera exponencial** — até 5 tentativas antes de reportar erro, então queda
+      de rede não perde seu progresso
+- [x] **API escuta só em `127.0.0.1`** — quem fala com a internet é o Nginx
+- [x] **`.env` e `.env.*` no `.gitignore`** (com exceção explícita para o `.env.example`)
+- [x] **`schema.sql` não cria usuário nem senha de banco** — credencial não mora em arquivo versionado
+- [x] **Stack trace vai para o log, nunca para a resposta**
+- [x] **Headers HTTP no Nginx**: CSP com `frame-ancestors 'none'`, HSTS, `X-Frame-Options: DENY`,
+      `nosniff`, Referrer-Policy, Permissions-Policy, `X-Robots-Tag: noindex`
+- [x] **CSP em `<meta>`** no `index.html` como rede de segurança. Cobre script, style, img e
+      connect; **não** cobre `frame-ancestors` nem HSTS, que só funcionam como cabeçalho HTTP
+- [x] **systemd endurecido** — usuário próprio sem shell, `ProtectSystem=strict`, `ProtectHome`,
+      `NoNewPrivileges`, `PrivateTmp`
+- [x] **Sem `dangerouslySetInnerHTML`** em lugar nenhum — todo texto é escapado pelo React
 - [x] **Links externos** com `rel="noreferrer"`
-- [x] **Sem `dangerouslySetInnerHTML`** em lugar nenhum — todo texto que você digita é renderizado escapado pelo React
-- [x] **Senha nunca sai do formulário** — o Supabase faz o hash; o app nunca vê nem guarda a senha
-- [x] **Política de senha** — mínimo 10 caracteres, 3 dos 4 tipos de caractere, bloqueio de senhas comuns, de sequências (`1234`, `qwerty`), de repetições e de senha contendo o próprio email. Medidor visual de força, e o botão de criar conta só habilita quando passa
-- [x] **Backoff exponencial no login** — 3 tentativas livres, depois 10s → 20s → 40s → 1min20 → 2min40, teto de 5min. Persiste no navegador, então recarregar a página não zera. Falha de **rede** não conta como tentativa errada
-- [x] **Mensagens sem enumeração de usuários** — login errado e cadastro duplicado devolvem textos que não revelam se aquele email tem conta. É assim que se evita que alguém descubra emails válidos antes de tentar força bruta
-- [x] **Limite de 60 gravações por minuto por usuário**, aplicado em trigger no banco (janela deslizante na própria linha). O cliente não consegue burlar: o contador é recalculado no servidor e ignora o que vem do navegador
-- [x] **Reenvio com espera exponencial** quando a gravação falha — até 5 tentativas antes de reportar erro, então queda de rede ou limite de taxa não perde o seu progresso
-- [x] **Detecção de configuração quebrada** — se o `.env` tiver BOM (o PowerShell grava assim com `-Encoding utf8`) ou só uma das duas variáveis, o app avisa na tela e no console em vez de cair em modo local silenciosamente
-- [x] **Alerta se a chave for `service_role`** — o app grita no console se detectar a chave errada
+- [x] **Detecção de `.env` quebrado** — se tiver BOM (o PowerShell grava assim com
+      `-Encoding utf8`), o app avisa na tela em vez de cair em modo local silenciosamente
 
-## Painel — você precisa fazer
+## Servidor — você precisa fazer
 
-### Supabase
+Os passos detalhados estão em [deploy/README.md](deploy/README.md). Este é o resumo do que é
+segurança, não configuração:
 
-- [ ] **Authentication → Providers → Email**: manter *Confirm email* **ligado**. Sem isso alguém cadastra com o email de outra pessoa.
-- [ ] **Authentication → Policies / Password**: ativar *Leaked password protection* (compara com a base do HaveIBeenPwned) e exigir mínimo de 8 caracteres.
-- [ ] **Authentication → URL Configuration**: colocar a URL da Vercel em *Site URL* e em *Redirect URLs*. Sem isso o link de recuperação de senha aponta para `localhost`.
-- [ ] **Fechar o cadastro público** — veja a ordem correta abaixo.
-- [ ] **Account → Security**: ativar MFA na sua conta Supabase.
+- [ ] **Gerar as senhas NA VPS**, com `openssl`, nunca digitá-las no chat ou num arquivo local.
+      A senha do MySQL que você mencionou em conversa deve ser considerada **queimada**: não a
+      use para nada.
+- [ ] **Usuário de banco dedicado** (`devpath_app`) com permissão só na base `devpath`.
+      A API **nunca** conecta como root.
+- [ ] **`.env` com `chmod 600`**, dono `devpath`
+- [ ] **MySQL escutando só em `127.0.0.1`** — confira com `ss -tlnp | grep 3306`
+- [ ] **Firewall**: só 22, 80 e 443 abertos
+- [ ] **HTTPS com certbot** e renovação automática testada (`certbot renew --dry-run`)
+- [ ] **Backup do `mysqldump` com permissão restrita** e fora do diretório servido pelo Nginx
+- [ ] **MFA na conta da Hostinger e do GitHub**
 
 > ### ⚠️ Ordem importa: crie sua conta ANTES de fechar o cadastro
 >
-> O DevPath é seu sistema pessoal, mas com cadastro aberto qualquer pessoa que descobrir a URL pode criar conta nele. Isso não expõe seus dados (o RLS garante isso), mas enche seu projeto de usuários e consome a cota do plano gratuito.
->
-> 1. Publique o site
-> 2. Crie a **sua** conta e confirme o email
+> 1. Publique o site com `CADASTRO_ABERTO=true`
+> 2. Crie a **sua** conta
 > 3. Confirme que o login funciona e que seu progresso migrou
-> 4. **Só então** vá em *Authentication → Sign In / Providers* e desative *Allow new users to sign up*
+> 4. **Só então** troque para `CADASTRO_ABERTO=false` e reinicie o serviço
 >
-> Se inverter a ordem, você fica trancado do lado de fora e vai precisar criar o usuário na mão pelo painel.
-
-### Vercel e GitHub
-
-- [ ] Variáveis `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` cadastradas em *Environment Variables* (não commitadas)
-- [ ] MFA ativado nas duas contas
-- [ ] Repositório **público** (exigência do GitHub Pages gratuito). Sem problema de segurança: a chave anon é pública por design e o RLS protege os dados. Mas confira dois pontos:
-  - [ ] Nenhum `.env` commitado (`git ls-files | grep env` deve mostrar só `.env.example`)
-  - [ ] Email de commit privado: *GitHub → Settings → Emails → Keep my email addresses private*
-
-## Sobre as dependências
-
-`npm audit` reporta 2 vulnerabilidades altas em `react-router` (GHSA-qwww-vcr4-c8h2, *RSC Mode CSRF Bypass*). Decisão consciente de **manter a versão atual (7.18.2)**:
-
-- O aviso é específico do **modo RSC** (React Server Components com server actions). Este app é uma SPA puramente cliente, com `HashRouter`, sem servidor e sem RSC. O código vulnerável nunca é executado aqui.
-- A correção sugerida pelo `npm audit fix --force` é **descer** para a 7.11.0 — que reintroduz o *open redirect levando a XSS* (GHSA-jjmj-jmhj-qwj2), corrigido justamente na 7.18.0. Esse sim é explorável em cliente.
-
-Ou seja: descer de versão deixaria o app **menos** seguro. Quando sair uma versão acima da 8.2.0, atualize e o audit zera.
-
-As vulnerabilidades de `vite`/`esbuild` que existiam antes foram resolvidas na atualização para o Vite 8. Elas afetavam apenas o servidor de desenvolvimento, nunca o site publicado.
+> Se inverter a ordem, você fica trancado do lado de fora e vai precisar inserir o usuário na
+> mão pelo MySQL.
 
 ## Limites de taxa: quem protege o quê
 
-Existem três camadas, e é importante saber que só uma delas é segurança de verdade:
+Três camadas, e só duas são segurança de verdade:
 
 | Camada | Onde roda | Vale como segurança? |
 |---|---|---|
-| Backoff do formulário de login | Navegador | **Não.** Um atacante chama a API direto e ignora nossa tela. Serve para você não se trancar sozinho e para travar quem tenta na marra pela interface. |
-| Rate limit do Supabase Auth | Servidor | **Sim.** Limita tentativas de login, cadastro e envio de email por IP. É o que realmente barra força bruta. |
-| Limite de 60 gravações/min | Banco (trigger) | **Sim.** Impede que uma sessão comprometida ou um script queime sua cota gravando em loop. |
+| Backoff do formulário de login | Navegador | **Não.** Um atacante chama a API direto e ignora sua tela. Serve para você não se trancar sozinho. |
+| 8 falhas / 15 min por email ou IP | API + banco | **Sim.** É o que barra força bruta de verdade. |
+| 60 gravações/min por usuário | API + banco | **Sim.** Impede que uma sessão comprometida queime o servidor gravando em loop. |
 
-Ajuste a segunda camada em **Authentication → Rate Limits** no painel do Supabase. Os padrões já são razoáveis; com o cadastro fechado, ficam folgados.
+## Repositório público: o que muda
+
+- Todo o código fica visível. **Isso é uma vantagem**: vira portfólio. Um sistema real, usado por
+  você, com autenticação própria, deploy e endurecimento — vale mais numa entrevista que dez
+  projetos de tutorial.
+- **Nenhum segredo pode estar no repo.** Confira antes de cada push:
+  `git ls-files | grep -i env` deve mostrar só `.env.example`.
+- Email de commit privado, se quiser: *GitHub → Settings → Emails → Keep my email addresses private*.
+
+## Sobre as dependências
+
+`npm audit` reporta vulnerabilidades altas em `react-router` (GHSA-qwww-vcr4-c8h2, *RSC Mode CSRF
+Bypass*). Decisão consciente de **manter a versão atual**:
+
+- O aviso é específico do **modo RSC** (React Server Components com server actions). Este app é
+  uma SPA puramente cliente, com `HashRouter`. O código vulnerável nunca é executado aqui.
+- A correção sugerida pelo `npm audit fix --force` **desce** para a 7.11.0 — que reintroduz o
+  *open redirect levando a XSS* (GHSA-jjmj-jmhj-qwj2), corrigido na 7.18.0. Esse sim é explorável
+  em cliente.
+
+Ou seja: descer de versão deixaria o app **menos** seguro. Reavalie quando sair uma versão acima.
+
+> Isso vale como resposta pronta em entrevista: "eu li o audit em vez de obedecer ao audit".
+
+## O que ainda não existe
+
+Faltas conhecidas, não esquecidas:
+
+- **Recuperação de senha por email** — exige SMTP. A tela está escondida em vez de oferecer um
+  botão que não faz nada. Para redefinir hoje, é `UPDATE` no banco (veja `deploy/README.md`).
+- **Rate limit no Nginx** — hoje o limite só existe na aplicação. Ela é DB-backed e cobre login e
+  gravação, mas um flood de requisições ainda chega até o Node. Um `limit_req_zone` no Nginx
+  pararia antes.
+- **Backup automático** — configure o cron com `mysqldump`, e **restaure pelo menos uma vez**.
+  Backup nunca testado é backup imaginário.
+- **Monitoramento** — nada avisa se a API cair. Hoje você descobre usando.
 
 ## Se abrir para outros usuários
 
-Nada disto é necessário enquanto o sistema for só seu. Se um dia abrir o cadastro:
+Nada disto é necessário enquanto o sistema for só seu:
 
-- **CAPTCHA** (Cloudflare Turnstile) nas telas de login e cadastro — o Supabase tem suporte nativo em *Authentication → Attack Protection*. É a maior barreira contra cadastro automatizado. Vai exigir liberar `challenges.cloudflare.com` na CSP do `vercel.json`.
-- **SMTP próprio** (Resend, SendGrid, Amazon SES) — o servidor de email embutido do Supabase tem limite baixo e não serve para produção.
-- **Apertar os rate limits** de cadastro e de envio de email.
-- **Política de retenção**: decidir o que acontece com contas que nunca confirmaram o email.
+- **CAPTCHA** (Cloudflare Turnstile) no cadastro. Vai exigir liberar `challenges.cloudflare.com`
+  na CSP do Nginx.
+- **SMTP próprio** (Resend, SendGrid, SES) para confirmação de email e recuperação de senha.
+- **Confirmação de email obrigatória** — sem isso alguém cadastra usando o email de outra pessoa.
+- **Política de retenção** para contas abandonadas.
+- **LGPD**: com usuários reais, você vira controlador de dados pessoais. Isso traz obrigações
+  legais, não só técnicas.
 
 ## Verificando depois de publicar
 
-Com o site no ar, confira os headers:
+Cabeçalhos:
 
 ```bash
-curl -sI https://SEU-SITE.vercel.app | findstr /i "content-security strict-transport x-frame x-content"
+curl -sI https://estudo.lastweek.com.br | grep -iE "content-security|strict-transport|x-frame|x-content"
 ```
 
-E teste o RLS na prática: crie uma segunda conta de teste, marque algo diferente nela e confirme que uma não enxerga o progresso da outra. Depois apague a conta de teste em *Authentication → Users*.
+O banco não deve estar exposto:
+
+```bash
+ss -tlnp | grep 3306
+```
+
+Deve aparecer só `127.0.0.1:3306`. Se aparecer `0.0.0.0:3306`, **pare e corrija antes de seguir**.
+
+E teste o isolamento na prática: crie uma segunda conta, marque algo diferente nela e confirme
+que uma não enxerga o progresso da outra. Depois apague a conta de teste.
