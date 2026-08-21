@@ -16,7 +16,6 @@ export default defineConfig({
         // Vite 8 (rolldown) exige funcao, nao objeto.
         manualChunks(id) {
           if (!id.includes('node_modules')) return
-          if (id.includes('@supabase')) return 'supabase'
           if (/[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react'
         },
       },
