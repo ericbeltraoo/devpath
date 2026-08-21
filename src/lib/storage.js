@@ -1,3 +1,5 @@
+import { normalizarRegistro, descartarOrfa } from './cronometro'
+
 const CHAVE = 'devpath:v1'
 
 export const ESTADO_INICIAL = {
@@ -11,7 +13,9 @@ export const ESTADO_INICIAL = {
   },
   topicos: {}, // "moduloId:indice" -> ISO da conclusao
   revisoes: {}, // "moduloId:indice" -> { nivel, proxima, ultima, acertos, falhas }
-  exercicios: {}, // "ex-id" -> 'fazendo' | 'feito'
+  // "ex-id" -> { status: 'fazendo'|'feito'|null, ms, iniciadoEm, concluidoEm }
+  // Antes era so a string do status. A migracao esta em migrarExercicios().
+  exercicios: {},
   desafios: {}, // "df-id" -> { status, iniciadoEm, entregueEm, autoavaliacao }
   checklist: {}, // "ck-id" -> true
   entrevistas: {}, // "p-id" -> true (domino essa resposta)
@@ -47,6 +51,25 @@ export const ESTADO_INICIAL = {
 
 const MAX_SESSOES = 400
 
+/**
+ * Estados salvos antes do cronometro guardam so a string do status. Aqui elas
+ * viram registros completos com ms = 0 — ninguem perde exercicio resolvido.
+ *
+ * Tambem e o ponto onde uma corrida deixada em andamento numa sessao anterior
+ * e descartada, para o app nao abrir contando o tempo em que ficou fechado.
+ */
+function migrarExercicios(bruto) {
+  const saida = {}
+  for (const [id, valor] of Object.entries(bruto || {})) {
+    const r = normalizarRegistro(valor)
+    if (!r) continue
+    const limpo = descartarOrfa(r)
+    if (!limpo.status && limpo.ms === 0) continue // registro vazio, nao ocupa espaco
+    saida[id] = limpo
+  }
+  return saida
+}
+
 /** Completa um estado salvo com os campos que faltam (versoes antigas do app). */
 export function normalizar(salvo) {
   if (!salvo || typeof salvo !== 'object') return { ...ESTADO_INICIAL }
@@ -61,6 +84,7 @@ export function normalizar(salvo) {
       // Corta o historico: o limite de 500 KB por usuario no banco e real.
       sessoes: (salvo.pomodoro?.sessoes || []).slice(-MAX_SESSOES),
     },
+    exercicios: migrarExercicios(salvo.exercicios),
     revisoes: salvo.revisoes || {},
     desafios: salvo.desafios || {},
     cronograma: { blocos: salvo.cronograma?.blocos || [] },

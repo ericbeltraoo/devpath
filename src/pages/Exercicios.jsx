@@ -4,6 +4,8 @@ import { EXERCICIOS, NIVEIS, TIPOS } from '../data/exercises'
 import { TRILHAS, getTrilha, todosModulos } from '../data/tracks'
 import { progressoModulo } from '../lib/planner'
 import { Empty, Bar, Callout } from '../components/ui'
+import CronometroExercicio from '../components/CronometroExercicio'
+import { decorrido, duracaoCurta, normalizarRegistro } from '../lib/cronometro'
 
 const CORES_NIVEL = { 1: 'ok', 2: 'warn', 3: 'danger' }
 
@@ -11,7 +13,9 @@ function Exercicio({ ex, modulos }) {
   const { estado, setExercicio } = useApp()
   const [aberto, setAberto] = useState(false)
   const [dicasVisiveis, setDicasVisiveis] = useState(false)
-  const status = estado.exercicios[ex.id]
+  const registro = normalizarRegistro(estado.exercicios[ex.id])
+  const status = registro?.status
+  const gasto = decorrido(registro)
   const trilha = getTrilha(ex.trilha)
 
   // O que este exercicio obriga a puxar de modulos anteriores, e se voce
@@ -35,6 +39,8 @@ function Exercicio({ ex, modulos }) {
             <span className="chip">{TIPOS[ex.tipo]}</span>
             <span className="chip">⏱ {ex.tempo}</span>
             {ex.tipo === 'cumulativo' && <span className="chip" style={{ borderColor: 'var(--purple)', color: 'var(--purple)' }}>🔗 revisa {ex.revisa.length} módulos</span>}
+            {gasto > 0 && <span className="chip" style={{ borderColor: 'var(--purple)', color: 'var(--purple)' }}>⏳ {duracaoCurta(gasto)} seu</span>}
+            {registro?.iniciadoEm && <span className="chip info">contando</span>}
             {status === 'feito' && <span className="chip ok">✓ resolvido</span>}
             {status === 'fazendo' && <span className="chip info">em andamento</span>}
           </div>
@@ -110,6 +116,8 @@ function Exercicio({ ex, modulos }) {
             ))}
           </div>
 
+          <CronometroExercicio id={ex.id} estimativa={ex.tempo} />
+
           <div className="btn-row" style={{ marginTop: 16 }}>
             <button
               className={`btn sm${status === 'fazendo' ? ' primary' : ''}`}
@@ -148,7 +156,7 @@ export default function Exercicios() {
       EXERCICIOS.filter((e) => {
         if (trilha !== 'todas' && e.trilha !== trilha) return false
         if (nivel !== 'todos' && String(e.nivel) !== nivel) return false
-        const s = estado.exercicios[e.id]
+        const s = estado.exercicios[e.id]?.status
         if (status === 'pendentes' && s === 'feito') return false
         if (status === 'feitos' && s !== 'feito') return false
         if (soCumulativos && e.tipo !== 'cumulativo') return false
@@ -158,9 +166,10 @@ export default function Exercicios() {
   )
 
   const cumulativos = EXERCICIOS.filter((e) => e.tipo === 'cumulativo')
-  const cumulativosFeitos = cumulativos.filter((e) => estado.exercicios[e.id] === 'feito').length
+  const cumulativosFeitos = cumulativos.filter((e) => estado.exercicios[e.id]?.status === 'feito').length
 
-  const feitos = EXERCICIOS.filter((e) => estado.exercicios[e.id] === 'feito').length
+  const feitos = EXERCICIOS.filter((e) => estado.exercicios[e.id]?.status === 'feito').length
+  const tempoTotal = Object.values(estado.exercicios).reduce((s, r) => s + decorrido(r), 0)
   const pct = Math.round((feitos / EXERCICIOS.length) * 100)
 
   return (
@@ -194,6 +203,7 @@ export default function Exercicios() {
           <div className="card-title">Progresso</div>
           <span className="small muted">
             {feitos} de {EXERCICIOS.length} resolvidos
+            {tempoTotal > 0 && ` · ${duracaoCurta(tempoTotal)} cronometrados`}
           </span>
         </div>
         <Bar pct={pct} />

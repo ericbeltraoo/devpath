@@ -4,6 +4,7 @@ import { gerarPlano } from '../lib/planner'
 import { agendarPrimeira, reagendar, filaDeRevisao, avaliarBloqueio } from '../lib/revisao'
 import { aplicarSincronizacao } from '../lib/sincronizarCurso'
 import { TRILHAS, todosModulos } from '../data/tracks'
+import { normalizarRegistro, bancar, decorrido, REGISTRO_VAZIO, INTERVALO_BANCO } from '../lib/cronometro'
 import {
   nuvemAtiva, carregarNuvem, salvarNuvem, renovarSessao,
   sair as sairDaApi, definirCallbackDeslogar,
@@ -324,11 +325,69 @@ export function AppProvider({ children }) {
 
       setNota: (moduloId, texto) => setEstado((e) => ({ ...e, notas: { ...e.notas, [moduloId]: texto } })),
 
+      // Mudar o status NAO mexe no tempo cronometrado: desmarcar "resolvido"
+      // por engano nao pode apagar quanto voce levou. So `zerarCronometro`
+      // apaga tempo, e ele existe exatamente para isso.
       setExercicio: (id, status) =>
         setEstado((e) => {
           const exercicios = { ...e.exercicios }
-          if (!status) delete exercicios[id]
-          else exercicios[id] = status
+          const r = normalizarRegistro(exercicios[id]) || { ...REGISTRO_VAZIO }
+          const atualizado = {
+            ...bancar(r), // sair de "fazendo" com o cronometro ligado consolida o tempo
+            status: status || null,
+            concluidoEm: status === 'feito' ? new Date().toISOString() : null,
+          }
+          if (!atualizado.status && atualizado.ms === 0) delete exercicios[id]
+          else exercicios[id] = atualizado
+          return { ...e, exercicios }
+        }),
+
+      // Um cronometro por vez. Dois exercicios contando junto produziriam
+      // numeros que voce nao gastou de verdade.
+      iniciarCronometro: (id) =>
+        setEstado((e) => {
+          const agora = Date.now()
+          const exercicios = {}
+          for (const [k, v] of Object.entries(e.exercicios)) {
+            const r = normalizarRegistro(v)
+            exercicios[k] = k === id ? r : bancar(r, agora)
+          }
+          const alvo = normalizarRegistro(exercicios[id]) || { ...REGISTRO_VAZIO }
+          exercicios[id] = {
+            ...alvo,
+            status: alvo.status === 'feito' ? 'feito' : 'fazendo',
+            iniciadoEm: alvo.iniciadoEm || agora,
+          }
+          return { ...e, exercicios }
+        }),
+
+      pausarCronometro: (id) =>
+        setEstado((e) => {
+          const r = normalizarRegistro(e.exercicios[id])
+          if (!r?.iniciadoEm) return e
+          return { ...e, exercicios: { ...e.exercicios, [id]: bancar(r) } }
+        }),
+
+      // Parar = consolidar o tempo e marcar como resolvido, gravando a data.
+      concluirCronometro: (id) =>
+        setEstado((e) => {
+          const r = normalizarRegistro(e.exercicios[id]) || { ...REGISTRO_VAZIO }
+          return {
+            ...e,
+            exercicios: {
+              ...e.exercicios,
+              [id]: { ...bancar(r), status: 'feito', concluidoEm: new Date().toISOString() },
+            },
+          }
+        }),
+
+      zerarCronometro: (id) =>
+        setEstado((e) => {
+          const r = normalizarRegistro(e.exercicios[id])
+          if (!r) return e
+          const exercicios = { ...e.exercicios }
+          if (!r.status) delete exercicios[id]
+          else exercicios[id] = { ...r, ms: 0, iniciadoEm: null }
           return { ...e, exercicios }
         }),
 
@@ -369,6 +428,41 @@ export function AppProvider({ children }) {
       resetar: () => setEstado({ ...ESTADO_INICIAL, perfil: { ...ESTADO_INICIAL.perfil } }),
     }
   }, [estado])
+
+  // Consolida periodicamente o cronometro de exercicio que estiver rodando.
+  //
+  // Sem isto, fechar a aba no meio de um exercicio deixaria `iniciadoEm`
+  // pendurado, e o app so descobriria o abandono na proxima abertura — sem
+  // saber quando voce parou de verdade. Consolidando de minuto em minuto, o
+  // pior caso perde 1 minuto de tempo real em vez de inventar uma noite
+  // inteira. Tambem serve de rede: se o navegador fechar, o tempo ja foi.
+  const temCronometro = Object.values(estado.exercicios).some((r) => r?.iniciadoEm)
+
+  useEffect(() => {
+    if (!temCronometro) return
+
+    const consolidar = () =>
+      setEstado((e) => {
+        const agora = Date.now()
+        let mudou = false
+        const exercicios = { ...e.exercicios }
+        for (const [k, v] of Object.entries(exercicios)) {
+          if (!v?.iniciadoEm) continue
+          exercicios[k] = { ...v, ms: decorrido(v, agora), iniciadoEm: agora }
+          mudou = true
+        }
+        return mudou ? { ...e, exercicios } : e
+      })
+
+    const t = setInterval(consolidar, INTERVALO_BANCO)
+    const aoEsconder = () => document.visibilityState === 'hidden' && consolidar()
+    document.addEventListener('visibilitychange', aoEsconder)
+
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', aoEsconder)
+    }
+  }, [temCronometro])
 
   const plano = useMemo(() => gerarPlano(estado.perfil, estado.topicos), [estado.perfil, estado.topicos])
 

@@ -5,6 +5,8 @@ import { TRILHAS, getTrilha, todosModulos, horasTrilha } from '../data/tracks'
 import { progressoModulo } from '../lib/planner'
 import { EXERCICIOS_MODULO, NIVEIS_EX, idExercicio } from '../data/exerciciosModulos'
 import { Bar, ChipCurso, Callout } from '../components/ui'
+import CronometroExercicio from '../components/CronometroExercicio'
+import { decorrido, duracaoCurta, normalizarRegistro } from '../lib/cronometro'
 
 
 function ExerciciosDoModulo({ modulo, modulos }) {
@@ -13,7 +15,9 @@ function ExerciciosDoModulo({ modulo, modulos }) {
   const lista = EXERCICIOS_MODULO[modulo.id]
   if (!lista?.length) return null
 
-  const feitos = lista.filter((_, i) => estado.exercicios[idExercicio(modulo.id, i + 1)] === 'feito').length
+  const registros = lista.map((_, i) => normalizarRegistro(estado.exercicios[idExercicio(modulo.id, i + 1)]))
+  const feitos = registros.filter((r) => r?.status === 'feito').length
+  const tempoModulo = registros.reduce((soma, r) => soma + decorrido(r), 0)
 
   return (
     <div style={{ marginTop: 14 }}>
@@ -21,12 +25,17 @@ function ExerciciosDoModulo({ modulo, modulos }) {
         <div className="small" style={{ fontWeight: 650, color: 'var(--text-2)' }}>
           ⌨️ Exercícios deste módulo ({feitos}/{lista.length})
         </div>
-        {feitos === lista.length && <span className="chip ok">✓ todos resolvidos</span>}
+        <div className="row" style={{ gap: 6 }}>
+          {tempoModulo > 0 && <span className="chip">⏱ {duracaoCurta(tempoModulo)} no total</span>}
+          {feitos === lista.length && <span className="chip ok">✓ todos resolvidos</span>}
+        </div>
       </div>
 
       {lista.map((ex) => {
         const id = idExercicio(modulo.id, ex.nivel)
-        const status = estado.exercicios[id]
+        const registro = normalizarRegistro(estado.exercicios[id])
+        const status = registro?.status
+        const gasto = decorrido(registro)
         const n = NIVEIS_EX[ex.nivel]
         const estaAberto = aberto === ex.nivel
 
@@ -57,6 +66,8 @@ function ExerciciosDoModulo({ modulo, modulos }) {
                   🔗 {puxa.length}
                 </span>
               )}
+              {gasto > 0 && <span className="chip" style={{ borderColor: 'var(--purple)', color: 'var(--purple)' }}>⏳ {duracaoCurta(gasto)} seu</span>}
+              {registro?.iniciadoEm && <span className="chip info">contando</span>}
               {status === 'feito' && <span className="chip ok">✓</span>}
               <span className="muted small">{estaAberto ? '▲' : '▼'}</span>
             </div>
@@ -98,6 +109,8 @@ function ExerciciosDoModulo({ modulo, modulos }) {
                 </ul>
 
                 {ex.dicas?.length > 0 && <DicasExercicio dicas={ex.dicas} />}
+
+                <CronometroExercicio id={id} estimativa={ex.tempo} />
 
                 <div className="btn-row" style={{ marginTop: 14 }}>
                   <button

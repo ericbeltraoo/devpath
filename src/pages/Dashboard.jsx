@@ -16,7 +16,9 @@ export default function Dashboard() {
   const { rodando, restante, fase } = usePomodoro()
   const nome = estado.perfil.nome
 
-  const exFeitos = Object.values(estado.exercicios).filter((v) => v === 'feito').length
+  // So os exercicios da aba Exercicios. Contar tambem os do Roadmap ("exm-*")
+  // contra este denominador faria a estatistica passar de 100%.
+  const exFeitos = EXERCICIOS.filter((e) => estado.exercicios[e.id]?.status === 'feito').length
   const perguntasOk = Object.keys(estado.entrevistas).length
   const respondidoLinkedin = Object.keys(estado.linkedin.respostas).length
   const notaLinkedin = respondidoLinkedin > 0 ? avaliar(estado.linkedin.respostas).nota : null
