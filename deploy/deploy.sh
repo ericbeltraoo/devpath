@@ -17,7 +17,7 @@
 set -euo pipefail
 
 REPO="/opt/devpath"
-WEB="/var/www/estudo.lastweek.com.br"
+WEB="/var/www/devpath.lastweek.com.br"
 SERVICO="devpath-api"
 BRANCH="${1:-main}"
 
@@ -71,7 +71,7 @@ azul "==> Conferindo se a API subiu"
 sleep 3
 for i in 1 2 3 4 5; do
   if curl -fsS --max-time 5 http://127.0.0.1:3001/api/health >/dev/null 2>&1; then
-    verde "==> Deploy concluido. https://estudo.lastweek.com.br"
+    verde "==> Deploy concluido. https://devpath.lastweek.com.br"
     exit 0
   fi
   sleep 2

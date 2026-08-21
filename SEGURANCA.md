@@ -172,7 +172,7 @@ Nada disto é necessário enquanto o sistema for só seu:
 Cabeçalhos:
 
 ```bash
-curl -sI https://estudo.lastweek.com.br | grep -iE "content-security|strict-transport|x-frame|x-content"
+curl -sI https://devpath.lastweek.com.br | grep -iE "content-security|strict-transport|x-frame|x-content"
 ```
 
 O banco não deve estar exposto:

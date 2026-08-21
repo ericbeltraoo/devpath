@@ -31,6 +31,47 @@ export async function verificarConexao() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Limpeza dos dados efemeros
+// ---------------------------------------------------------------------------
+// `refresh_tokens` e `tentativas_login` crescem a cada login. Sem limpeza,
+// crescem para sempre.
+//
+// Isto poderia ser um EVENT do MySQL, mas ligar o event scheduler exige
+// `SET GLOBAL`, que muda a instancia inteira do banco — compartilhada com os
+// outros projetos desta VPS. Rodando aqui dentro, o DevPath nao toca em nada
+// fora do proprio banco.
+//
+// Falha de limpeza nao derruba a API: e manutencao, nao caminho critico.
+// ---------------------------------------------------------------------------
+const DIA = 24 * 60 * 60 * 1000
+
+export async function limparDadosEfemeros() {
+  try {
+    const [t] = await pool.query(
+      'DELETE FROM tentativas_login WHERE em < NOW() - INTERVAL 30 DAY'
+    )
+    const [r] = await pool.query(
+      `DELETE FROM refresh_tokens
+        WHERE expira_em < NOW() - INTERVAL 7 DAY
+           OR (revogado_em IS NOT NULL AND revogado_em < NOW() - INTERVAL 7 DAY)`
+    )
+    if (t.affectedRows || r.affectedRows) {
+      console.log(`[limpeza] ${t.affectedRows} tentativa(s), ${r.affectedRows} refresh token(s)`)
+    }
+  } catch (e) {
+    console.error('[limpeza] falhou, segue o jogo:', e.message)
+  }
+}
+
+/** Agenda a limpeza diaria. O timer nao segura o processo vivo (`unref`). */
+export function agendarLimpeza() {
+  limparDadosEfemeros()
+  const t = setInterval(limparDadosEfemeros, DIA)
+  t.unref()
+  return t
+}
+
 /**
  * Executa dentro de transacao, com rollback automatico em caso de erro.
  * Usado no login, onde varias escritas precisam ser atomicas.

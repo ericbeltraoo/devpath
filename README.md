@@ -13,7 +13,7 @@ preparação para entrevistas e um avaliador de perfil do LinkedIn.
 | API | Node + Express, em `servidor/` |
 | Banco | MySQL |
 | Autenticação | Própria: bcrypt + JWT curto + refresh token em cookie `httpOnly` |
-| Hospedagem | VPS Hostinger, em `estudo.lastweek.com.br` |
+| Hospedagem | VPS Hostinger, em `devpath.lastweek.com.br` |
 
 O app tem dois modos, decididos automaticamente pela variável `VITE_API_URL`:
 

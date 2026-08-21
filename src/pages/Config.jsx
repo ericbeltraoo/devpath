@@ -19,7 +19,7 @@ function Conta() {
         </div>
         <Callout tipo="warn" titulo="Como ativar a sincronizacao">
           Defina <span className="mono">VITE_API_URL</span> no arquivo <span className="mono">.env</span> apontando para a
-          API (ex.: <span className="mono">https://estudo.lastweek.com.br</span>) e reinicie o servidor. O passo a
+          API (ex.: <span className="mono">https://devpath.lastweek.com.br</span>) e reinicie o servidor. O passo a
           passo do deploy esta no README.
         </Callout>
       </div>

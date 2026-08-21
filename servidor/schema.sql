@@ -106,21 +106,21 @@ CREATE TABLE IF NOT EXISTS tentativas_login (
 -- ---------------------------------------------------------------------------
 -- Limpeza
 -- ---------------------------------------------------------------------------
--- Sem isso as duas tabelas de controle crescem para sempre. Se o event
--- scheduler estiver desligado, a API tambem limpa sozinha (ver api.js).
+-- Sem isso as duas tabelas de controle crescem para sempre.
+--
+-- A limpeza NAO e feita por EVENT do MySQL, e a escolha e deliberada:
+-- ligar o event scheduler exige `SET GLOBAL event_scheduler = ON`, que muda
+-- a instancia INTEIRA do MySQL — compartilhada com os outros projetos desta
+-- VPS. Este schema nao toca em nada fora do banco `devpath`.
+--
+-- (Alem disso `SET GLOBAL` nao sobrevive a um restart do MySQL, entao a
+-- limpeza pararia sem ninguem perceber.)
+--
+-- Quem limpa e a propria API, em servidor/src/db.js -> limparDadosEfemeros(),
+-- chamada na subida e a cada 24h. Ela roda dentro do processo do DevPath,
+-- com o usuario devpath_app, que so alcanca este banco.
 -- ---------------------------------------------------------------------------
-SET GLOBAL event_scheduler = ON;
-
-DROP EVENT IF EXISTS limpar_dados_efemeros;
-CREATE EVENT limpar_dados_efemeros
-  ON SCHEDULE EVERY 1 DAY
-  DO
-    BEGIN
-      DELETE FROM tentativas_login WHERE em < NOW() - INTERVAL 30 DAY;
-      DELETE FROM refresh_tokens
-        WHERE expira_em < NOW() - INTERVAL 7 DAY
-           OR (revogado_em IS NOT NULL AND revogado_em < NOW() - INTERVAL 7 DAY);
-    END;
+-- (nada a executar aqui)
 
 -- ---------------------------------------------------------------------------
 -- Usuario da aplicacao

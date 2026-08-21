@@ -2,7 +2,7 @@ import express from 'express'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import cors from 'cors'
-import { pool, verificarConexao } from './db.js'
+import { pool, verificarConexao, agendarLimpeza } from './db.js'
 import {
   ErroAuth, cadastrar, autenticar, gerarAccessToken, verificarAccessToken,
   emitirRefresh, rotacionarRefresh, revogar, revogarTodos,
@@ -10,7 +10,7 @@ import {
 
 const app = express()
 const PORTA = Number(process.env.PORT) || 3001
-const ORIGEM = process.env.CORS_ORIGIN || 'https://estudo.lastweek.com.br'
+const ORIGEM = process.env.CORS_ORIGIN || 'https://devpath.lastweek.com.br'
 const PRODUCAO = process.env.NODE_ENV === 'production'
 
 // Atras do Nginx: sem isto, req.ip devolve 127.0.0.1 para todo mundo e o
@@ -184,6 +184,10 @@ async function subir() {
     console.error('Nao foi possivel conectar ao MySQL:', e.message)
     process.exit(1)
   }
+  // Limpeza das tabelas efemeras: aqui, e nao num EVENT do MySQL, para nao
+  // mexer em configuracao global do banco compartilhado com outros projetos.
+  agendarLimpeza()
+
   app.listen(PORTA, '127.0.0.1', () => {
     // Escuta so em 127.0.0.1: quem fala com a internet e o Nginx.
     console.log(`API do DevPath em 127.0.0.1:${PORTA} (origem: ${ORIGEM})`)

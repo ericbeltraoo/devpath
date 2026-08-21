@@ -1,4 +1,4 @@
-# Deploy — estudo.lastweek.com.br
+# Deploy — devpath.lastweek.com.br
 
 VPS Hostinger com Nginx e MySQL, compartilhada com o `lastweek.com.br`.
 Nada aqui toca na configuração do outro projeto: são `server_block` separados
@@ -8,9 +8,9 @@ por `server_name` e um banco novo.
 
 ```
 Navegador
-    │  https://estudo.lastweek.com.br
+    │  https://devpath.lastweek.com.br
     ▼
-  Nginx ──── /            → arquivos estáticos em /var/www/estudo.lastweek.com.br
+  Nginx ──── /            → arquivos estáticos em /var/www/devpath.lastweek.com.br
         └─── /api/*       → proxy para 127.0.0.1:3001
                                   │
                           API Node (systemd)
@@ -23,6 +23,41 @@ A API escuta **apenas em 127.0.0.1**. Quem fala com a internet é o Nginx.
 Frontend e API no **mesmo domínio** — decisão deliberada: assim o cookie do
 refresh token é *first-party* e sobrevive ao bloqueio de cookies de terceiros
 que os navegadores aplicam por padrão.
+
+## Isolamento: o que o DevPath NÃO encosta
+
+A VPS já roda o `lastweek.com.br` e o `recomp`. Nada deste deploy altera o que
+já está funcionando. Cada recurso é próprio:
+
+| Recurso | Do DevPath | Compartilhado? |
+|---|---|---|
+| Server block Nginx | arquivo próprio em `sites-available` | não |
+| Certificado TLS | lineage própria do `devpath.lastweek.com.br` | não |
+| Diretório web | `/var/www/devpath.lastweek.com.br` | não |
+| Serviço systemd | `devpath-api` | não |
+| Porta | `3001`, só em `127.0.0.1` | **precisa conferir** |
+| Banco | `devpath` | não |
+| Usuário do banco | `devpath_app`, grants só em `devpath.*` | não |
+| Processo MySQL | — | **sim, é a mesma instância** |
+
+Duas atenções, e as duas têm verificação abaixo:
+
+- **A porta 3001** pode já estar em uso por outro projeto. Confira antes.
+- **A instância do MySQL é a mesma.** O `schema.sql` só cria o banco `devpath`
+  e nada mais — de propósito, ele **não** liga o event scheduler nem executa
+  qualquer `SET GLOBAL`. A limpeza das tabelas efêmeras roda dentro da própria
+  API (`db.js → limparDadosEfemeros`), justamente para não mexer em
+  configuração de servidor que o outro projeto também usa.
+
+Confira que a porta está livre **antes de tudo**:
+
+```bash
+sudo ss -tlnp | grep -w 3001 || echo "3001 livre"
+```
+
+Se aparecer algo, escolha outra porta e troque em três lugares: `PORT` no
+`servidor/.env`, o `proxy_pass` do `nginx-devpath.conf` e o `curl` de
+verificação no `deploy/deploy.sh`.
 
 ---
 
@@ -80,7 +115,7 @@ SQL
 cat > .env <<EOF
 NODE_ENV=production
 PORT=3001
-CORS_ORIGIN=https://estudo.lastweek.com.br
+CORS_ORIGIN=https://devpath.lastweek.com.br
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=devpath_app
@@ -126,7 +161,7 @@ cd /opt/devpath
 **`/opt/devpath/.env`** (frontend, lido no build):
 
 ```
-VITE_API_URL=https://estudo.lastweek.com.br
+VITE_API_URL=https://devpath.lastweek.com.br
 ```
 
 O `servidor/.env` já foi criado no passo 2.2, com as credenciais geradas na
@@ -145,28 +180,78 @@ Log: `sudo journalctl -u devpath-api -f`
 
 ## 5. DNS
 
-No painel do domínio, crie um registro **A** para `estudo` apontando para o IP
-da VPS. Confirme antes de seguir — o certbot falha se o DNS não propagou:
+No painel do seu domínio (Hostinger → *Domínios → DNS / Nameservers*), crie
+**um** registro novo. Não mexa nos que já existem.
+
+**Opção recomendada — CNAME:**
+
+| Tipo | Nome | Aponta para | TTL |
+|---|---|---|---|
+| CNAME | `devpath` | `lastweek.com.br` | 300 |
+
+É o mesmo padrão que o seu `www` já usa. A vantagem é real: se o IP da VPS
+mudar um dia, você corrige **só** o registro A do domínio raiz e o `devpath`
+acompanha sozinho. Com um A record você teria que lembrar de atualizar os dois.
+
+**Alternativa — A record**, se preferir explícito:
+
+| Tipo | Nome | Aponta para | TTL |
+|---|---|---|---|
+| A | `devpath` | `187.127.40.109` | 300 |
+
+Esse é o IP para onde já apontam o `lastweek.com.br`, o `www` e o `recomp`.
+
+> Deixe o TTL em **300** enquanto configura. Se errar, você corrige em 5
+> minutos em vez de esperar as 4 horas do TTL 14400 do `recomp`.
+
+Confirme a propagação **antes** de seguir — o certbot falha se o DNS ainda não
+resolveu, e cada falha conta no limite de tentativas do Let's Encrypt:
 
 ```bash
-dig +short estudo.lastweek.com.br
+dig +short devpath.lastweek.com.br
 ```
+
+Precisa devolver `187.127.40.109`. Se vier vazio, espere e tente de novo.
 
 ## 6. Nginx e HTTPS
 
+Arquivo próprio, sem tocar nos que já existem:
+
 ```bash
-sudo cp deploy/nginx-estudo.conf /etc/nginx/sites-available/estudo.lastweek.com.br
-sudo ln -s /etc/nginx/sites-available/estudo.lastweek.com.br /etc/nginx/sites-enabled/
+sudo cp deploy/nginx-devpath.conf /etc/nginx/sites-available/devpath.lastweek.com.br
+sudo ln -s /etc/nginx/sites-available/devpath.lastweek.com.br /etc/nginx/sites-enabled/
 ```
 
 Comente o bloco `listen 443` (o certificado ainda não existe), depois:
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d estudo.lastweek.com.br
 ```
 
+> `nginx -t` valida **toda** a configuração da máquina, incluindo a dos outros
+> sites. Se ele reclamar de algo que você não escreveu, o problema já existia —
+> não invente correção no arquivo alheio; leia a mensagem primeiro.
+
+Agora o certificado. **Só o domínio do DevPath**:
+
+```bash
+sudo certbot --nginx -d devpath.lastweek.com.br
+```
+
+> ⚠️ Não passe `-d lastweek.com.br` nem `--expand` junto. Isso reemitiria o
+> certificado do outro projeto e mexeria na configuração dele — exatamente o
+> que este deploy evita. Um domínio, um certificado.
+
 Descomente o bloco 443, `sudo nginx -t && sudo systemctl reload nginx`.
+
+Confirme que o outro site continua de pé antes de comemorar:
+
+```bash
+curl -sI https://lastweek.com.br | head -1
+sudo certbot certificates | grep -E "Certificate Name|Domains"
+```
+
+Devem aparecer duas lineages separadas, cada uma com o seu domínio.
 
 ## 7. Primeiro deploy
 
@@ -182,7 +267,7 @@ depois de falhar deixa um estado pior do que não ter feito nada.
 
 Com `CADASTRO_ABERTO=true` no `servidor/.env`:
 
-1. Abra `https://estudo.lastweek.com.br`
+1. Abra `https://devpath.lastweek.com.br`
 2. Crie sua conta
 3. Confirme que o login funciona e que o progresso sincroniza
 
@@ -206,8 +291,8 @@ cd /opt/devpath && ./deploy/deploy.sh
 ## Verificação pós-deploy
 
 ```bash
-curl -sI https://estudo.lastweek.com.br | grep -iE "strict-transport|content-security|x-frame"
-curl -s https://estudo.lastweek.com.br/api/health
+curl -sI https://devpath.lastweek.com.br | grep -iE "strict-transport|content-security|x-frame"
+curl -s https://devpath.lastweek.com.br/api/health
 ```
 
 E o teste que realmente importa: crie uma **segunda conta**, marque coisas
