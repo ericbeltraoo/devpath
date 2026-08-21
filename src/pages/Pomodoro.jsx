@@ -9,7 +9,7 @@ import { TRILHAS, todosModulos } from '../data/tracks'
 import { Stat, Callout } from '../components/ui'
 
 function Relogio() {
-  const { fase, rodando, restante, ciclo, progresso, iniciar, pausar, zerar, pular, trocarFase } = usePomodoro()
+  const { fase, rodando, pausado, restante, ciclo, progresso, iniciar, pausar, zerar, pular, trocarFase } = usePomodoro()
   const { estado } = useApp()
   const f = FASES[fase]
   // O anel era 260px fixo. Num iPhone SE (320px) sobravam 32px de respiro —
@@ -61,7 +61,7 @@ function Relogio() {
             {mmss(restante)}
           </div>
           <div className="small muted center" style={{ marginTop: -6 }}>
-            {f.rotulo} · ciclo {ciclo} de {estado.pomodoro.config.ciclosAteLonga}
+            {pausado ? '⏸ pausado' : f.rotulo} · ciclo {ciclo} de {estado.pomodoro.config.ciclosAteLonga}
           </div>
         </div>
       </div>
@@ -69,7 +69,7 @@ function Relogio() {
       <div className="btn-row" style={{ justifyContent: 'center', marginTop: 22 }}>
         {!rodando ? (
           <button className="btn primary" onClick={iniciar} style={{ minWidth: 130 }}>
-            ▶ Iniciar
+            {pausado ? '▶ Retomar' : '▶ Iniciar'}
           </button>
         ) : (
           <button className="btn" onClick={pausar} style={{ minWidth: 130 }}>

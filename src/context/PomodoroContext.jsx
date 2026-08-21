@@ -33,10 +33,20 @@ export function PomodoroProvider({ children }) {
     []
   )
 
-  // Se o tempo da fase atual mudar nas configuracoes com o timer parado,
-  // o mostrador acompanha em vez de ficar exibindo o valor antigo.
+  // Duracao da fase atual, guardada para detectar mudanca de CONFIGURACAO.
+  const duracaoVista = useRef(null)
+
+  // Quando voce altera o tempo da fase nas configuracoes com o cronometro
+  // parado, o mostrador acompanha em vez de exibir o valor antigo.
+  //
+  // A condicao e sobre a DURACAO ter mudado, nao sobre o cronometro ter
+  // parado. Antes isto reagia a `rodando`, entao toda PAUSA caia aqui e
+  // zerava o tempo restante — voce perdia o progresso do bloco ao pausar.
   useEffect(() => {
-    if (!rodando) setRestante(duracaoDaFase(fase))
+    const dur = duracaoDaFase(fase)
+    if (duracaoVista.current === dur) return
+    duracaoVista.current = dur
+    if (!rodando) setRestante(dur)
   }, [config.foco, config.pausaCurta, config.pausaLonga, fase, rodando, duracaoDaFase])
 
   const proximaFase = useCallback(
@@ -127,11 +137,15 @@ export function PomodoroProvider({ children }) {
     setRodando(true)
   }, [restante])
 
+  // Pausar NAO mexe em `restante`: o valor atual fica congelado na tela e
+  // iniciar() retoma exatamente dali. So o instante-alvo e descartado, porque
+  // ele nao vale mais depois do tempo parado.
   const pausar = useCallback(() => {
     setRodando(false)
     fimEm.current = null
   }, [])
 
+  // Zerar e o unico caminho que devolve o tempo cheio. Pausar nunca zera.
   const zerar = useCallback(() => {
     setRodando(false)
     fimEm.current = null
@@ -159,14 +173,17 @@ export function PomodoroProvider({ children }) {
   const total = duracaoDaFase(fase)
   const progresso = total === 0 ? 0 : ((total - restante) / total) * 100
 
+  // Parado no meio de um bloco — derivado, sem estado extra para dessincronizar.
+  const pausado = !rodando && restante > 0 && restante < total
+
   const valor = useMemo(
     () => ({
-      fase, rodando, restante, ciclo, progresso, total,
+      fase, rodando, pausado, restante, ciclo, progresso, total,
       moduloFoco, setModuloFoco,
       iniciar, pausar, zerar, pular, trocarFase,
       config,
     }),
-    [fase, rodando, restante, ciclo, progresso, total, moduloFoco, iniciar, pausar, zerar, pular, trocarFase, config]
+    [fase, rodando, pausado, restante, ciclo, progresso, total, moduloFoco, iniciar, pausar, zerar, pular, trocarFase, config]
   )
 
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>
