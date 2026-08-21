@@ -79,9 +79,6 @@ async function requisitar(caminho, opcoes = {}, jaTentouRenovar = false) {
   return corpo
 }
 
-/** Exposto para outros modulos (ex.: execucao de testes) reusarem a sessao. */
-export const requisitarPublico = (caminho, opcoes) => requisitar(caminho, opcoes)
-
 // ------------------------------------------------------------ autenticacao
 
 export async function criarConta(email, senha, nome) {

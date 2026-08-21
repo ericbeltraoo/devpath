@@ -4,7 +4,6 @@ import { useApp } from '../context/AppContext'
 import { TRILHAS, getTrilha, todosModulos, horasTrilha } from '../data/tracks'
 import { progressoModulo } from '../lib/planner'
 import { EXERCICIOS_MODULO, NIVEIS_EX, idExercicio } from '../data/exerciciosModulos'
-import CorrigirExercicio from '../components/CorrigirExercicio'
 import { Bar, ChipCurso, Callout } from '../components/ui'
 
 
@@ -99,8 +98,6 @@ function ExerciciosDoModulo({ modulo, modulos }) {
                 </ul>
 
                 {ex.dicas?.length > 0 && <DicasExercicio dicas={ex.dicas} />}
-
-                <CorrigirExercicio exercicio={ex} idEx={id} />
 
                 <div className="btn-row" style={{ marginTop: 14 }}>
                   <button
