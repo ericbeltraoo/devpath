@@ -1,4 +1,4 @@
-import { urlDoBanco, consultar, NOMES, variaveisDeBancoVisiveis } from './_lib/db.js'
+import { candidatosDeUrl, consultar, NOMES, variaveisDeBancoVisiveis, conexaoEmUso, detalheErro } from './_lib/db.js'
 
 // ---------------------------------------------------------------------------
 // Diagnostico de configuracao
@@ -31,10 +31,12 @@ export default async function handler(req, res) {
   }
 
   // ---- banco
-  const url = urlDoBanco()
-  r.banco.variavelEncontrada = Boolean(url)
+  const candidatos = candidatosDeUrl()
+  r.banco.variavelEncontrada = candidatos.length > 0
+  // Quais nomes tem URL com cara de Postgres. Nomes, nunca valores.
+  r.banco.candidatos = candidatos.map((c) => c.nome)
 
-  if (url) {
+  if (candidatos.length) {
     try {
       const linhas = await consultar(
         `SELECT table_name FROM information_schema.tables
@@ -42,8 +44,9 @@ export default async function handler(req, res) {
       )
       r.banco.conecta = true
       r.banco.tabelas = linhas.map((l) => l.table_name)
+      r.banco.conexaoEmUso = conexaoEmUso()   // qual das candidatas respondeu
     } catch (e) {
-      r.banco.erro = e.message   // mensagem do driver, sem a connection string
+      r.banco.erro = detalheErro(e)   // sem a connection string dentro
     }
   }
 
