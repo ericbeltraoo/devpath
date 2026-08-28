@@ -1,14 +1,16 @@
-import { neon } from '@neondatabase/serverless'
+import pg from 'pg'
 
-// Driver HTTP, nao o Pool.
+// Driver: `pg`, o cliente padrao de Postgres, falando TCP.
 //
-// O Pool do Neon conecta por WebSocket, e isso falhava na Vercel com um erro
-// que nem mensagem tinha: "[object ErrorEvent]". Funcao serverless nao ganha
-// nada com pool de conexoes — ela morre depois de responder — e o modo HTTP
-// faz uma requisicao por consulta, sem handshake de socket.
+// Foram duas tentativas antes desta, as duas com o driver do Neon:
 //
-// O que se perde: transacao com varias instrucoes e estado de sessao. Nada
-// disso e usado aqui.
+//   Pool (WebSocket)  -> falhava com "[object ErrorEvent]" na Vercel
+//   neon() (HTTP)     -> 404 "resource-not-found" neste host
+//
+// Os dois dependiam de infraestrutura especifica do fornecedor. O `pg` fala
+// o protocolo do Postgres direto, e o runtime Node da Vercel abre TCP sem
+// problema. Funciona com Neon, Supabase, RDS ou um Postgres na sua VPS —
+// que era, desde o comeco, o objetivo de nao ficar preso a ninguem.
 
 // ---------------------------------------------------------------------------
 // Conexao com o Postgres
@@ -121,14 +123,23 @@ export async function conexao() {
 
   const falhas = []
   for (const c of candidatos) {
+    // max: 1 — numa funcao serverless nao ha concorrencia dentro do processo,
+    // e varias conexoes por invocacao esgotariam o limite do banco a toa.
+    const tentativa = new pg.Pool({
+      connectionString: c.url,
+      max: 1,
+      ssl: { rejectUnauthorized: true },
+      connectionTimeoutMillis: 8000,
+      idleTimeoutMillis: 10000,
+    })
     try {
-      const tentativa = neon(c.url)
       await tentativa.query('SELECT 1')
       cliente = tentativa
       nomeEmUso = c.nome
       return cliente
     } catch (e) {
       falhas.push(`${c.nome}: ${detalheErro(e)}`)
+      await tentativa.end().catch(() => {})
     }
   }
 
@@ -187,11 +198,9 @@ export function garantirTabelas() {
 export async function consultar(sql, params = []) {
   await garantirTabelas()
   const c = await conexao()
-  // O driver HTTP ja devolve as linhas direto, sem o envelope { rows }.
-  return c.query(sql, params)
+  const r = await c.query(sql, params)
+  return r.rows
 }
 
-// emTransacao foi removida junto com o Pool: o modo HTTP nao mantem sessao
-// entre chamadas, entao BEGIN/COMMIT em requisicoes separadas nao seria uma
-// transacao de verdade — seria uma que parece funcionar e nao funciona.
-// Nenhuma rota usava.
+// emTransacao nao existe: nenhuma rota precisa de transacao. Se um dia
+// precisar, com `pg` da para faze-la de verdade, pegando um client do pool.
