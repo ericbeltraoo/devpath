@@ -25,8 +25,9 @@ digitada em nenhum arquivo do projeto:
 node -e "console.log(require('bcryptjs').hashSync(process.argv[1],12))" 'SUA-SENHA-AQUI'
 ```
 
-Copie a saída — começa com `$2a$12$`. É isso que vai para o servidor, não a
-senha.
+Copie a saída inteira — começa com `$2b$12$` (ou `$2a$12$`; as duas são
+válidas, a letra só indica a variante do algoritmo). É **isso** que vai para o
+servidor, nunca a senha.
 
 > Rode isso num terminal que você vá fechar. No PowerShell, `Clear-History`
 > depois; no bash, `history -c`.
@@ -44,7 +45,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 | Nome | Valor |
 |---|---|
 | `DATABASE_URL` | a connection string do passo 1 |
-| `SENHA_HASH` | o hash do passo 2 (o que começa com `$2a$12$`) |
+| `SENHA_HASH` | o hash do passo 2 (o que começa com `$2b$12$`) |
 | `JWT_SECRET` | o segredo do passo 3 |
 | `VITE_API_URL` | `/` |
 
