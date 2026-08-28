@@ -21,7 +21,7 @@ export const INTERVALO_BANCO = 60 * 1000
  */
 export const LIMITE_ABANDONO = 3 * INTERVALO_BANCO
 
-export const REGISTRO_VAZIO = { status: null, ms: 0, iniciadoEm: null, concluidoEm: null }
+export const REGISTRO_VAZIO = { status: null, ms: 0, iniciadoEm: null, concluidoEm: null, tentouEm: null }
 
 /** Aceita o formato antigo (string) e o novo (objeto). */
 export function normalizarRegistro(bruto) {
@@ -37,6 +37,8 @@ export function normalizarRegistro(bruto) {
     ms: Number.isFinite(ms) && ms >= 0 ? ms : 0,
     iniciadoEm: Number.isFinite(iniciadoEm) && iniciadoEm > 0 ? iniciadoEm : null,
     concluidoEm: typeof bruto.concluidoEm === 'string' ? bruto.concluidoEm : null,
+    // Carimbo de "eu tentei". E ele que destranca a solucao comentada.
+    tentouEm: typeof bruto.tentouEm === 'string' ? bruto.tentouEm : null,
   }
 }
 

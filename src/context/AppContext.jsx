@@ -381,6 +381,21 @@ export function AppProvider({ children }) {
           }
         }),
 
+      // Destranca a solucao comentada. Fica gravado: e um compromisso com
+      // voce mesmo, nao um clique qualquer.
+      marcarTentou: (id) =>
+        setEstado((e) => {
+          const r = normalizarRegistro(e.exercicios[id]) || { ...REGISTRO_VAZIO }
+          if (r.tentouEm) return e
+          return {
+            ...e,
+            exercicios: {
+              ...e.exercicios,
+              [id]: { ...r, status: r.status || 'fazendo', tentouEm: new Date().toISOString() },
+            },
+          }
+        }),
+
       zerarCronometro: (id) =>
         setEstado((e) => {
           const r = normalizarRegistro(e.exercicios[id])

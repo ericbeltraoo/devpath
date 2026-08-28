@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import Plano from './pages/Plano'
 import Roadmap from './pages/Roadmap'
 import Exercicios from './pages/Exercicios'
+import Exercicio from './pages/Exercicio'
 import Desafios from './pages/Desafios'
 import Revisao from './pages/Revisao'
 import Pomodoro from './pages/Pomodoro'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/pomodoro" element={<Pomodoro />} />
           <Route path="/cronograma" element={<Cronograma />} />
           <Route path="/exercicios" element={<Exercicios />} />
+          <Route path="/ex/:id" element={<Exercicio />} />
           <Route path="/desafios" element={<Desafios />} />
           <Route path="/entrevistas" element={<Entrevistas />} />
           <Route path="/linkedin" element={<Linkedin />} />
