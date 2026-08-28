@@ -66,7 +66,52 @@ export function db() {
   return pool
 }
 
+// ---------------------------------------------------------------------------
+// Criacao automatica das tabelas
+// ---------------------------------------------------------------------------
+// O sistema se instala sozinho na primeira consulta.
+//
+// Antes, criar as tabelas era um passo manual: copiar o schema e colar no
+// editor SQL do painel. Esse passo produziu dois erros seguidos que nao
+// tinham nada a ver com o schema — o editor manda tudo como uma instrucao
+// preparada ("cannot insert multiple commands"), e as vezes a sessao dele e
+// somente leitura ("cannot execute CREATE TABLE in a read-only transaction").
+//
+// Passo manual que falha por motivo alheio e passo que nao devia existir.
+// Tudo aqui e IF NOT EXISTS, entao rodar de novo nao faz nada.
+// ---------------------------------------------------------------------------
+const TABELAS = [
+  `CREATE TABLE IF NOT EXISTS progresso (
+     id            INT PRIMARY KEY,
+     dados         JSONB NOT NULL,
+     atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+   )`,
+  `CREATE TABLE IF NOT EXISTS tentativas (
+     id SERIAL PRIMARY KEY,
+     ip TEXT NOT NULL,
+     em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+   )`,
+  `CREATE INDEX IF NOT EXISTS idx_tentativas ON tentativas (ip, em)`,
+]
+
+let instalacao
+
+/** Roda uma vez por processo. A promessa e guardada, nao o resultado, para
+ *  duas requisicoes simultaneas nao dispararem a criacao em paralelo. */
+export function garantirTabelas() {
+  if (!instalacao) {
+    instalacao = (async () => {
+      for (const sql of TABELAS) await db().query(sql)
+    })().catch((e) => {
+      instalacao = null // deixa tentar de novo na proxima requisicao
+      throw e
+    })
+  }
+  return instalacao
+}
+
 export async function consultar(sql, params = []) {
+  await garantirTabelas()
   const r = await db().query(sql, params)
   return r.rows
 }

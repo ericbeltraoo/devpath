@@ -1,7 +1,7 @@
 # Deploy na Vercel — devpath
 
 O progresso fica gravado num Postgres gerenciado, então marcar um tópico no
-trabalho aparece em casa. São 6 passos.
+trabalho aparece em casa. São 3 passos.
 
 > **Antes de tudo:** os planos gratuitos de Postgres mudam com frequência.
 > A arquitetura abaixo é estável; o fornecedor você escolhe na hora. Qualquer
@@ -10,29 +10,39 @@ trabalho aparece em casa. São 6 passos.
 
 ## 1. Banco
 
-No painel da Vercel: **Storage → Create Database → Postgres**, ou crie a base
-no fornecedor que preferir. Copie a *connection string*.
+No painel da Vercel, dentro do projeto: **Storage → Create Database →
+Postgres**. Dê um nome e crie.
 
-Cole o conteúdo de [`api/schema.sql`](../api/schema.sql) no editor SQL do
-provedor e execute. São duas tabelas.
+Se ele perguntar a qual projeto conectar, escolha o **devstudy**. Se não
+perguntar, abra o banco depois e use **Connect Project**.
+
+Isso é tudo. **Você não precisa copiar a connection string**, e não precisa
+criar tabela nenhuma:
+
+- ao conectar o banco ao projeto, a Vercel cadastra a variável de conexão sozinha
+- as tabelas são criadas pela própria API, na primeira vez que ela usa o banco
+
+> Copiar a string à mão continua funcionando (variável `DATABASE_URL`), mas é o
+> caminho com mais chance de erro: basta cortar o final e nada conecta.
 
 ## 2. A senha
 
-Gere o hash **na sua máquina**, escolhendo uma senha longa. Ela nunca é
-digitada em nenhum arquivo do projeto:
+Escolha uma frase longa que você lembre — **não existe "esqueci minha senha"**
+aqui. Na pasta do projeto:
 
 ```bash
-node -e "console.log(require('bcryptjs').hashSync(process.argv[1],12))" 'SUA-SENHA-AQUI'
+node gerar-segredos.mjs "meu cafe as 6 da manha"
 ```
 
-Copie a saída inteira — começa com `$2b$12$` (ou `$2a$12$`; as duas são
-válidas, a letra só indica a variante do algoritmo). É **isso** que vai para o
-servidor, nunca a senha.
+Ele imprime dois valores rotulados, `SENHA_HASH` e `JWT_SECRET`. Copie os dois.
 
-> Rode isso num terminal que você vá fechar. No PowerShell, `Clear-History`
-> depois; no bash, `history -c`.
+O que vai para a Vercel é o **hash**, nunca a frase. Hash é a senha passada por
+um liquidificador: não dá para voltar atrás. Se alguém ler tudo que está lá,
+encontra o embaralhado, e o embaralhado não abre nada.
 
-## 3. O segredo do token
+> Depois de copiar, limpe o histórico: `Clear-History` no PowerShell.
+
+## 3. (nada a fazer — o segredo já saiu no passo 2)
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
@@ -44,7 +54,7 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 
 | Nome | Valor |
 |---|---|
-| `DATABASE_URL` | a connection string do passo 1 — **veja a nota abaixo** |
+| `DATABASE_URL` | **provavelmente já existe** — veja a nota abaixo |
 | `SENHA_HASH` | o hash do passo 2 (o que começa com `$2b$12$`) |
 | `JWT_SECRET` | o segredo do passo 3 |
 | `VITE_API_URL` | `/` |
