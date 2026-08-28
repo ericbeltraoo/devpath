@@ -13,7 +13,11 @@
 import fs from 'node:fs'
 import { Pool } from '@neondatabase/serverless'
 
-const url = process.argv[2] || process.env.DATABASE_URL
+const url =
+  process.argv[2] ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_NON_POOLING
 
 if (!url) {
   console.log('\nComo usar:\n')

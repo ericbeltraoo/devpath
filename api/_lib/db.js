@@ -13,16 +13,40 @@ import { neonConfig, Pool } from '@neondatabase/serverless'
 // entregam uma connection string. Trocar de provedor e trocar uma variavel.
 // ---------------------------------------------------------------------------
 
+// A Vercel batiza essa variavel de formas diferentes conforme o banco foi
+// criado (integracao com Neon, Postgres proprio, ou cadastro manual). Aceitar
+// todos os nomes usuais evita o erro mais chato possivel: a variavel EXISTE,
+// so nao com o nome que o codigo procura.
+const NOMES = [
+  'DATABASE_URL',
+  'POSTGRES_URL',
+  'POSTGRES_URL_NON_POOLING',
+  'POSTGRES_PRISMA_URL',
+  'NEON_DATABASE_URL',
+]
+
+export function urlDoBanco() {
+  for (const n of NOMES) {
+    const v = process.env[n]
+    if (v && v.startsWith('postgres')) return v
+  }
+  return null
+}
+
 let pool
 
 export function db() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error('DATABASE_URL ausente.')
+  const url = urlDoBanco()
+  if (!url) {
+    // Mensagem util no log: diz o que procurar, sem vazar valor nenhum.
+    throw new Error(
+      `Nenhuma variavel de conexao encontrada. Defina uma destas: ${NOMES.join(', ')}`
+    )
   }
   // Uma funcao serverless morre a cada requisicao, mas o Node pode reaproveitar
   // o processo. Guardar o pool no escopo do modulo evita abrir conexao nova a
   // cada chamada — e e por isso que ele fica FORA da funcao handler.
-  if (!pool) pool = new Pool({ connectionString: process.env.DATABASE_URL })
+  if (!pool) pool = new Pool({ connectionString: url })
   return pool
 }
 

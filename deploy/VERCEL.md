@@ -44,10 +44,17 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
 
 | Nome | Valor |
 |---|---|
-| `DATABASE_URL` | a connection string do passo 1 |
+| `DATABASE_URL` | a connection string do passo 1 — **veja a nota abaixo** |
 | `SENHA_HASH` | o hash do passo 2 (o que começa com `$2b$12$`) |
 | `JWT_SECRET` | o segredo do passo 3 |
 | `VITE_API_URL` | `/` |
+
+> **Sobre a `DATABASE_URL`:** se voce criou o banco pelo painel da Vercel, ela
+> provavelmente **ja esta na lista** — a Vercel cadastra sozinha ao conectar o
+> banco ao projeto, as vezes com outro nome (`POSTGRES_URL`,
+> `POSTGRES_URL_NON_POOLING`). O codigo aceita qualquer um desses, entao **nao
+> crie uma duplicada**: confira a lista antes. So adicione manualmente se
+> nenhuma variavel de Postgres aparecer ali.
 
 > `VITE_API_URL=/` diz ao app que a API está no mesmo domínio. **Sem essa
 > variável o site sobe, funciona, e salva só no navegador** — sem erro nenhum
