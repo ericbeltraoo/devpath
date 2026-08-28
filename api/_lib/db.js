@@ -1,4 +1,14 @@
-import { Pool } from '@neondatabase/serverless'
+import { neon } from '@neondatabase/serverless'
+
+// Driver HTTP, nao o Pool.
+//
+// O Pool do Neon conecta por WebSocket, e isso falhava na Vercel com um erro
+// que nem mensagem tinha: "[object ErrorEvent]". Funcao serverless nao ganha
+// nada com pool de conexoes — ela morre depois de responder — e o modo HTTP
+// faz uma requisicao por consulta, sem handshake de socket.
+//
+// O que se perde: transacao com varias instrucoes e estado de sessao. Nada
+// disso e usado aqui.
 
 // ---------------------------------------------------------------------------
 // Conexao com o Postgres
@@ -67,11 +77,27 @@ export function candidatosDeUrl() {
   return saida
 }
 
-/** Driver as vezes lanca erro com message vazia; sem isto o log fica mudo. */
-export const detalheErro = (e) =>
-  e?.message || e?.code || e?.name || String(e) || 'erro sem mensagem'
+/**
+ * Erro legivel a partir do que o driver lancar.
+ *
+ * Existe porque a resposta chegou a trazer "[object ErrorEvent]": o objeto
+ * nao tinha `message`, e String(e) devolveu a representacao inutil. Mensagem
+ * de erro que nao diz nada custa horas de quem esta tentando configurar.
+ */
+export function detalheErro(e) {
+  if (!e) return 'erro sem detalhe'
+  if (typeof e === 'string') return e
+  const partes = [e.message, e.code, e.severity, e.detail, e.error?.message, e.type]
+    .filter((x) => typeof x === 'string' && x.trim())
+  if (partes.length) return [...new Set(partes)].join(' | ')
+  try {
+    const j = JSON.stringify(e, Object.getOwnPropertyNames(e))
+    if (j && j !== '{}') return j.slice(0, 300)
+  } catch { /* objeto nao serializavel */ }
+  return e.constructor?.name || Object.prototype.toString.call(e)
+}
 
-let pool
+let cliente
 let nomeEmUso = null
 
 export const conexaoEmUso = () => nomeEmUso
@@ -84,7 +110,7 @@ export const conexaoEmUso = () => nomeEmUso
  * dizer qual esta em uso — sem nunca mostrar o valor.
  */
 export async function conexao() {
-  if (pool) return pool
+  if (cliente) return cliente
 
   const candidatos = candidatosDeUrl()
   if (!candidatos.length) {
@@ -95,15 +121,14 @@ export async function conexao() {
 
   const falhas = []
   for (const c of candidatos) {
-    const tentativa = new Pool({ connectionString: c.url })
     try {
+      const tentativa = neon(c.url)
       await tentativa.query('SELECT 1')
-      pool = tentativa
+      cliente = tentativa
       nomeEmUso = c.nome
-      return pool
+      return cliente
     } catch (e) {
       falhas.push(`${c.nome}: ${detalheErro(e)}`)
-      await tentativa.end().catch(() => {})
     }
   }
 
@@ -149,8 +174,8 @@ let instalacao
 export function garantirTabelas() {
   if (!instalacao) {
     instalacao = (async () => {
-      const p = await conexao()
-      for (const sql of TABELAS) await p.query(sql)
+      const c = await conexao()
+      for (const ddl of TABELAS) await c.query(ddl)
     })().catch((e) => {
       instalacao = null // deixa a proxima requisicao tentar de novo
       throw e
@@ -161,26 +186,12 @@ export function garantirTabelas() {
 
 export async function consultar(sql, params = []) {
   await garantirTabelas()
-  const p = await conexao()
-  const r = await p.query(sql, params)
-  return r.rows
+  const c = await conexao()
+  // O driver HTTP ja devolve as linhas direto, sem o envelope { rows }.
+  return c.query(sql, params)
 }
 
-/**
- * Executa dentro de transacao, com rollback automatico em caso de erro.
- */
-export async function emTransacao(fn) {
-  const p = await conexao()
-  const conn = await p.connect()
-  try {
-    await conn.query('BEGIN')
-    const r = await fn(conn)
-    await conn.query('COMMIT')
-    return r
-  } catch (e) {
-    await conn.query('ROLLBACK').catch(() => {})
-    throw e
-  } finally {
-    conn.release()
-  }
-}
+// emTransacao foi removida junto com o Pool: o modo HTTP nao mantem sessao
+// entre chamadas, entao BEGIN/COMMIT em requisicoes separadas nao seria uma
+// transacao de verdade — seria uma que parece funcionar e nao funciona.
+// Nenhuma rota usava.
