@@ -3,18 +3,12 @@ import { useApp } from './context/AppContext'
 import Sidebar from './components/Sidebar'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
-import Dashboard from './pages/Dashboard'
-import Plano from './pages/Plano'
-import Roadmap from './pages/Roadmap'
+import Hoje from './pages/Hoje'
+import Trilha from './pages/Trilha'
 import Exercicios from './pages/Exercicios'
 import Exercicio from './pages/Exercicio'
-import Desafios from './pages/Desafios'
-import Revisao from './pages/Revisao'
 import Pomodoro from './pages/Pomodoro'
 import Cronograma from './pages/Cronograma'
-import Entrevistas from './pages/Entrevistas'
-import Linkedin from './pages/Linkedin'
-import Avaliador from './pages/Avaliador'
 import Config from './pages/Config'
 
 function Carregando({ texto }) {
@@ -44,18 +38,12 @@ export default function App() {
       <Sidebar />
       <main className="main">
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/plano" element={<Plano />} />
-          <Route path="/roadmap" element={<Roadmap />} />
-          <Route path="/revisao" element={<Revisao />} />
+          <Route path="/" element={<Hoje />} />
+          <Route path="/trilha" element={<Trilha />} />
           <Route path="/pomodoro" element={<Pomodoro />} />
           <Route path="/cronograma" element={<Cronograma />} />
           <Route path="/exercicios" element={<Exercicios />} />
           <Route path="/ex/:id" element={<Exercicio />} />
-          <Route path="/desafios" element={<Desafios />} />
-          <Route path="/entrevistas" element={<Entrevistas />} />
-          <Route path="/linkedin" element={<Linkedin />} />
-          <Route path="/avaliador" element={<Avaliador />} />
           <Route path="/config" element={<Config />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -528,3 +528,29 @@ textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
   color: var(--text-2);
   white-space: pre;
 }
+
+/* Hoje / lista de exercicios */
+.linha-revisao {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-soft);
+  flex-wrap: wrap;
+}
+.cartao-ex {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-sm);
+  margin-bottom: 7px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color .15s, background .15s;
+}
+.cartao-ex:hover { border-color: var(--accent); background: var(--surface-2); }
+@media (max-width: 620px) {
+  .cartao-ex { flex-wrap: wrap; }
+}

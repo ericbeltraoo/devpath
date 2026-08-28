@@ -5,24 +5,18 @@ import { mmss } from '../lib/pomodoro'
 import { Bar } from './ui'
 
 const LINKS = [
-  { grupo: 'Foco diario', itens: [
-    { to: '/', icone: '📊', texto: 'Painel', end: true },
-    { to: '/revisao', icone: '🔁', texto: 'Revisao', badge: 'revisao' },
+  // Cinco itens, nao doze. Cada aba a mais e uma decisao a mais antes de
+  // comecar a estudar — e a decisao mais cara do dia e a primeira.
+  { grupo: '', itens: [
+    { to: '/', icone: '🎯', texto: 'Hoje', end: true, badge: 'revisao' },
+    { to: '/exercicios', icone: '⌨️', texto: 'Exercicios' },
+    { to: '/trilha', icone: '📚', texto: 'Trilha' },
+  ]},
+  { grupo: 'Ferramentas', itens: [
     { to: '/pomodoro', icone: '⏱️', texto: 'Pomodoro', badge: 'pomodoro' },
     { to: '/cronograma', icone: '📅', texto: 'Cronograma' },
   ]},
-  { grupo: 'Estudo', itens: [
-    { to: '/plano', icone: '🗺️', texto: 'Meu plano' },
-    { to: '/roadmap', icone: '📚', texto: 'Roadmap' },
-    { to: '/exercicios', icone: '⌨️', texto: 'Exercicios' },
-    { to: '/desafios', icone: '🎯', texto: 'Desafios' },
-  ]},
-  { grupo: 'Carreira', itens: [
-    { to: '/entrevistas', icone: '🎤', texto: 'Entrevistas' },
-    { to: '/linkedin', icone: '💼', texto: 'LinkedIn' },
-    { to: '/avaliador', icone: '📈', texto: 'Avaliador' },
-  ]},
-  { grupo: 'Sistema', itens: [
+  { grupo: '', itens: [
     { to: '/config', icone: '⚙️', texto: 'Configuracoes' },
   ]},
 ]
@@ -88,9 +82,9 @@ export default function Sidebar() {
       </div>
 
       <nav className="nav">
-        {LINKS.map((g) => (
-          <div key={g.grupo}>
-            <div className="nav-group-title">{g.grupo}</div>
+        {LINKS.map((g, i) => (
+          <div key={i}>
+            {g.grupo && <div className="nav-group-title">{g.grupo}</div>}
             {g.itens.map((l) => (
               <NavLink
                 key={l.to}
