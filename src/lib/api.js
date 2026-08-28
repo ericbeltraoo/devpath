@@ -29,10 +29,17 @@ function lerEnv(nome) {
   return undefined
 }
 
-const BASE = lerEnv('VITE_API_URL') || ''
+// Na Vercel o frontend e a API vivem no MESMO dominio, entao a URL correta e
+// vazia (caminho relativo). Mas "vazio" tambem e o valor de "nao configurado".
+//
+// Por isso a decisao NAO pode ser tomada olhando a BASE: com VITE_API_URL="/"
+// o app cairia em modo local justamente na hospedagem em que ele funciona.
+// Quem decide e a PRESENCA da variavel; a BASE so diz para onde apontar.
+const URL_API = lerEnv('VITE_API_URL')
+const BASE = (URL_API || '').replace(/\/+$/, '')   // "/" e "https://x/" viram ""
 
-/** Sem URL de API, o app roda em modo local (so neste navegador). */
-export const nuvemAtiva = Boolean(BASE)
+/** Sem VITE_API_URL, o app roda em modo local (so neste navegador). */
+export const nuvemAtiva = URL_API != null && URL_API !== ''
 
 /** Mantido para a tela de Configuracoes continuar avisando de config quebrada. */
 export const configuracaoIncompleta = false
@@ -81,52 +88,41 @@ async function requisitar(caminho, opcoes = {}, jaTentouRenovar = false) {
 
 // ------------------------------------------------------------ autenticacao
 
-export async function criarConta(email, senha, nome) {
-  return requisitar('/api/auth/cadastrar', {
-    method: 'POST',
-    body: JSON.stringify({ email, senha, nome }),
-  })
+// ---------------------------------------------------------------------------
+// Sessao — sistema de UM usuario
+// ---------------------------------------------------------------------------
+// Nao existe cadastro nem email: uma senha, definida como hash na variavel
+// SENHA_HASH do servidor. O token vai em cookie httpOnly, invisivel para o
+// JavaScript da pagina, entao nao ha nada em memoria para restaurar.
+// ---------------------------------------------------------------------------
+
+export async function entrar(senha) {
+  await requisitar('/api/entrar', { method: 'POST', body: JSON.stringify({ senha }) })
+  return { id: 'dono', email: 'voce' }
 }
 
-export async function entrar(email, senha) {
-  const r = await requisitar('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, senha }),
-  })
-  accessToken = r.accessToken
-  return r.usuario
-}
-
-/** Restaura a sessao no carregamento da pagina, usando o cookie httpOnly. */
+/** Restaura a sessao ao abrir a pagina: pergunta se o cookie ainda vale. */
 export async function renovarSessao() {
   try {
-    const r = await requisitar('/api/auth/refresh', { method: 'POST' }, true)
-    accessToken = r.accessToken
-    return r.usuario
+    await requisitar('/api/sessao', {}, true)
+    return { id: 'dono', email: 'voce' }
   } catch {
-    accessToken = null
     return null
   }
 }
 
 export async function sair() {
   try {
-    await requisitar('/api/auth/logout', { method: 'POST' }, true)
-  } finally {
-    accessToken = null
+    await requisitar('/api/sair', { method: 'POST' }, true)
+  } catch {
+    /* sem sessao no servidor: sair localmente ja basta */
   }
 }
 
-export async function sairDeTudo() {
-  try {
-    await requisitar('/api/auth/sair-de-tudo', { method: 'POST' })
-  } finally {
-    accessToken = null
-  }
-}
+export const sairDeTudo = sair
 
-// A recuperacao de senha por email exige servidor SMTP. Enquanto nao houver,
-// e melhor dizer isso na cara do que oferecer um botao que nao faz nada.
+// A recuperacao de senha exigiria email. Com um usuario so, o caminho e
+// trocar a variavel SENHA_HASH no painel — esta no README.
 export const recuperacaoDisponivel = false
 
 // --------------------------------------------------------------- progresso
@@ -146,18 +142,11 @@ export function traduzirErro(erro) {
   const c = erro?.codigo
   const m = (erro?.message || '').toLowerCase()
 
-  if (c === 'credenciais') return 'Email ou senha incorretos.'
+  if (c === 'credenciais') return 'Senha incorreta.'
   if (c === 'bloqueado') return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos.'
-  if (c === 'senha_fraca') return erro.message
-  if (c === 'email_invalido') return 'Email invalido.'
-  if (c === 'cadastro_fechado') return 'O cadastro de novas contas esta fechado neste sistema.'
-  if (c === 'cadastro_recusado') {
-    // Neutro de proposito: nao confirma se o email ja tem conta.
-    return 'Nao foi possivel concluir o cadastro com esses dados. Se voce ja tem conta, use "Entrar".'
+  if (c === 'sem_sessao' || c === 'sessao_expirada' || c === 'sessao_invalida') {
+    return 'Sessao expirada. Entre novamente.'
   }
-  if (c === 'refresh_reusado') return 'Sua sessao foi invalidada por seguranca. Entre novamente.'
-  if (c === 'refresh_expirado' || c === 'sem_refresh') return 'Sessao expirada. Entre novamente.'
-  if (c === 'limite_taxa') return 'Muitas gravacoes seguidas. Aguarde um minuto.'
   if (c === 'muito_grande') return 'Seu progresso passou do limite de tamanho.'
 
   if (m.includes('failed to fetch') || m.includes('networkerror')) {

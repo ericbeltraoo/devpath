@@ -515,6 +515,7 @@ export function AppProvider({ children }) {
     // nuvem
     nuvemAtiva,
     sessao,
+    setSessao,   // a tela de login precisa entregar a sessao recem-criada
     usuario: sessao?.user ?? null,
     authPronta,
     dadosProntos,
