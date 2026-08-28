@@ -14,6 +14,16 @@ import { candidatosDeUrl, consultar, NOMES, variaveisDeBancoVisiveis, conexaoEmU
 
 export default async function handler(req, res) {
   const r = {
+    // Qual codigo esta rodando de fato. Sem isto nao da para distinguir
+    // "o conserto nao funcionou" de "o conserto nem chegou no ar" — e a
+    // segunda hipotese e comum: URL de deployment aponta para sempre para
+    // aquele deploy, e "Redeploy" reconstroi o MESMO commit.
+    versao: {
+      commit: (process.env.VERCEL_GIT_COMMIT_SHA || 'desconhecido').slice(0, 7),
+      mensagem: (process.env.VERCEL_GIT_COMMIT_MESSAGE || '').split(String.fromCharCode(10))[0] || null,
+      ambiente: process.env.VERCEL_ENV || 'desconhecido',
+      url: process.env.VERCEL_URL || null,
+    },
     banco: {
       variavelEncontrada: false,
       conecta: false,
