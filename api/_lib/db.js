@@ -30,11 +30,29 @@ export const NOMES = [
 export const variaveisDeBancoVisiveis = () =>
   Object.keys(process.env).filter((k) => /^(POSTGRES|DATABASE|PG|NEON)/i.test(k)).sort()
 
+const EH_POSTGRES = (v) => typeof v === 'string' && /^postgres(ql)?:\/\/\S+@/.test(v)
+
 export function urlDoBanco() {
+  // 1) nomes exatos, na ordem de preferencia
   for (const n of NOMES) {
-    const v = process.env[n]
-    if (v && v.startsWith('postgres')) return v
+    if (EH_POSTGRES(process.env[n])) return process.env[n]
   }
+
+  // 2) qualquer variavel cujo VALOR seja uma URL Postgres.
+  //
+  // Isto existe porque a Vercel oferece um "prefixo de variavel de ambiente
+  // personalizado" ao conectar o banco: com o prefixo ACME, ela cria
+  // ACME_DATABASE_URL, e uma lista de nomes fixos nunca acertaria.
+  // Procurar pelo formato do valor, e nao pelo nome, funciona com qualquer
+  // prefixo — e um valor que comeca com "postgres://usuario@" nao e outra
+  // coisa senao uma string de conexao.
+  const comSufixoConhecido = Object.keys(process.env)
+    .filter((k) => NOMES.some((n) => k.endsWith(n)) && EH_POSTGRES(process.env[k]))
+    .sort()
+  if (comSufixoConhecido.length) return process.env[comSufixoConhecido[0]]
+
+  const qualquer = Object.keys(process.env).filter((k) => EH_POSTGRES(process.env[k])).sort()
+  if (qualquer.length) return process.env[qualquer[0]]
 
   // Ultimo recurso: algumas integracoes nao entregam a URL montada, e sim as
   // pecas separadas. Montar aqui evita voce ter que montar na mao e errar o
