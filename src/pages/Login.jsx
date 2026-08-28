@@ -31,7 +31,13 @@ export default function Login() {
       const usuario = await entrar(senha)
       setSessao({ user: usuario })
     } catch (err) {
-      setErro(traduzirErro(err))
+      // 500 aqui e quase sempre configuracao do servidor, nao senha errada.
+      // Sem este empurrao, "Erro interno" e um beco sem saida.
+      if (err?.codigo === 'interno') {
+        setErro('config')
+      } else {
+        setErro(traduzirErro(err))
+      }
       setSenha('')
     } finally {
       setEnviando(false)
@@ -63,11 +69,20 @@ export default function Login() {
           />
         </div>
 
-        {erro && (
+        {erro === 'config' ? (
+          <div className="callout danger" style={{ marginBottom: 14 }}>
+            <b>O servidor nao esta configurado.</b>
+            <div className="small" style={{ marginTop: 6 }}>
+              Isto nao e senha errada. Abra{' '}
+              <a href="/api/diagnostico" target="_blank" rel="noreferrer">/api/diagnostico</a>{' '}
+              para ver exatamente o que falta.
+            </div>
+          </div>
+        ) : erro ? (
           <div className="callout danger" style={{ marginBottom: 14 }}>
             {erro}
           </div>
-        )}
+        ) : null}
 
         <button className="btn primary" style={{ width: '100%' }} disabled={!senha || enviando}>
           {enviando ? 'Entrando...' : 'Entrar'}
