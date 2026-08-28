@@ -17,19 +17,35 @@ import { neonConfig, Pool } from '@neondatabase/serverless'
 // criado (integracao com Neon, Postgres proprio, ou cadastro manual). Aceitar
 // todos os nomes usuais evita o erro mais chato possivel: a variavel EXISTE,
 // so nao com o nome que o codigo procura.
-const NOMES = [
+export const NOMES = [
   'DATABASE_URL',
+  'DATABASE_URL_UNPOOLED',      // integracao nativa do Neon com a Vercel
   'POSTGRES_URL',
   'POSTGRES_URL_NON_POOLING',
   'POSTGRES_PRISMA_URL',
   'NEON_DATABASE_URL',
 ]
 
+/** Nomes de variaveis de banco presentes. So os NOMES, nunca os valores. */
+export const variaveisDeBancoVisiveis = () =>
+  Object.keys(process.env).filter((k) => /^(POSTGRES|DATABASE|PG|NEON)/i.test(k)).sort()
+
 export function urlDoBanco() {
   for (const n of NOMES) {
     const v = process.env[n]
     if (v && v.startsWith('postgres')) return v
   }
+
+  // Ultimo recurso: algumas integracoes nao entregam a URL montada, e sim as
+  // pecas separadas. Montar aqui evita voce ter que montar na mao e errar o
+  // encoding da senha.
+  const { PGHOST, PGUSER, PGPASSWORD, PGDATABASE } = process.env
+  if (PGHOST && PGUSER && PGPASSWORD && PGDATABASE) {
+    const u = encodeURIComponent(PGUSER)
+    const p = encodeURIComponent(PGPASSWORD)
+    return `postgres://${u}:${p}@${PGHOST}/${PGDATABASE}?sslmode=require`
+  }
+
   return null
 }
 

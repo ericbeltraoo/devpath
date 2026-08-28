@@ -1,4 +1,4 @@
-import { urlDoBanco, consultar } from './_lib/db.js'
+import { urlDoBanco, consultar, NOMES, variaveisDeBancoVisiveis } from './_lib/db.js'
 
 // ---------------------------------------------------------------------------
 // Diagnostico de configuracao
@@ -14,7 +14,17 @@ import { urlDoBanco, consultar } from './_lib/db.js'
 
 export default async function handler(req, res) {
   const r = {
-    banco: { variavelEncontrada: false, conecta: false, tabelas: [], erro: null },
+    banco: {
+      variavelEncontrada: false,
+      conecta: false,
+      tabelas: [],
+      erro: null,
+      // Nomes que existem no ambiente e nomes que o codigo procura. Com os
+      // dois lado a lado da para ver na hora se o problema e ausencia ou
+      // nome diferente. Valores nunca aparecem.
+      variaveisPresentes: variaveisDeBancoVisiveis(),
+      nomesAceitos: NOMES,
+    },
     senha: { definida: false, pareceHashBcrypt: false },
     token: { definido: false, tamanhoSuficiente: false },
     pronto: false,
@@ -53,7 +63,13 @@ export default async function handler(req, res) {
   r.pronto = r.banco.conecta && temTabelas && r.senha.pareceHashBcrypt && r.token.tamanhoSuficiente
 
   r.oQueFalta = []
-  if (!r.banco.variavelEncontrada) r.oQueFalta.push('Nenhuma variavel de conexao (DATABASE_URL / POSTGRES_URL).')
+  if (!r.banco.variavelEncontrada) {
+    r.oQueFalta.push(
+      r.banco.variaveisPresentes.length
+        ? `Ha variaveis de banco (${r.banco.variaveisPresentes.join(', ')}), mas nenhuma com URL Postgres valida. Confira o valor.`
+        : 'Nenhuma variavel de banco no ambiente. Adicione DATABASE_URL e REDEPLOY — variavel nova nao entra em deploy antigo.'
+    )
+  }
   else if (!r.banco.conecta) r.oQueFalta.push('A connection string existe mas nao conecta. Veja banco.erro.')
   else if (!temTabelas) r.oQueFalta.push('Conectou, mas faltam as tabelas. Rode: node preparar-banco.mjs "<url>"')
   if (!r.senha.definida) r.oQueFalta.push('SENHA_HASH ausente.')
