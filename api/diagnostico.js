@@ -32,6 +32,9 @@ export default async function handler(req, res) {
       // Nomes que existem no ambiente e nomes que o codigo procura. Com os
       // dois lado a lado da para ver na hora se o problema e ausencia ou
       // nome diferente. Valores nunca aparecem.
+      // Nomes das variaveis presentes so aparecem quando algo esta errado.
+      // Com tudo certo, isso e so reconhecimento de graca para quem procura
+      // brecha — e esta rota ficou publica quando a protecao de deploy saiu.
       variaveisPresentes: variaveisDeBancoVisiveis(),
       nomesAceitos: NOMES,
     },
@@ -56,15 +59,6 @@ export default async function handler(req, res) {
       r.banco.tabelas = linhas.map((l) => l.table_name)
       r.banco.conexaoEmUso = conexaoEmUso()   // qual das candidatas respondeu
 
-      // Prova que a ESCRITA funciona, nao so a leitura. Sao contagens, e
-      // contagem nao revela nada de ninguem.
-      const [t] = await consultar(
-        `SELECT COUNT(*)::int AS total,
-                COUNT(DISTINCT ip)::int AS ips,
-                COUNT(*) FILTER (WHERE em > NOW() - INTERVAL '15 minutes')::int AS recentes
-           FROM tentativas`
-      )
-      r.banco.tentativas = t
     } catch (e) {
       r.banco.erro = detalheErro(e)   // sem a connection string dentro
     }
@@ -99,6 +93,13 @@ export default async function handler(req, res) {
   else if (!r.senha.pareceHashBcrypt) r.oQueFalta.push('SENHA_HASH nao parece um hash bcrypt. Voce colou a senha em vez do hash?')
   if (!r.token.definido) r.oQueFalta.push('JWT_SECRET ausente.')
   else if (!r.token.tamanhoSuficiente) r.oQueFalta.push('JWT_SECRET tem menos de 32 caracteres.')
+
+  // Configuracao certa: responde o minimo. Configuracao quebrada: responde
+  // tudo, porque ai o detalhe e o que resolve — e nao ha o que proteger num
+  // sistema que ainda nao esta de pe.
+  if (r.pronto) {
+    return res.status(200).json({ pronto: true, versao: r.versao })
+  }
 
   res.status(200).json(r)
 }
