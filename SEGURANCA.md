@@ -115,7 +115,7 @@ Três camadas, e só duas são segurança de verdade:
 | Camada | Onde roda | Vale como segurança? |
 |---|---|---|
 | Backoff do formulário de login | Navegador | **Não.** Um atacante chama a API direto e ignora sua tela. Serve para você não se trancar sozinho. |
-| 8 falhas / 15 min por email ou IP | API + banco | **Sim.** É o que barra força bruta de verdade. |
+| 8 falhas / 15 min **por IP** | API + banco | **Em parte.** Barra força bruta de uma origem só — verificado: a 9ª tentativa recebe 429. Não barra quem troca de IP: num teste real, requisições saindo por 2 endereços diferentes dobraram o teto sem esforço nenhum. O que sustenta a segurança aqui é a senha longa com bcrypt custo 12, não este contador. |
 | 60 gravações/min por usuário | API + banco | **Sim.** Impede que uma sessão comprometida queime o servidor gravando em loop. |
 
 ## Repositório público: o que muda
