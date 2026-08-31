@@ -55,6 +55,16 @@ export default async function handler(req, res) {
       r.banco.conecta = true
       r.banco.tabelas = linhas.map((l) => l.table_name)
       r.banco.conexaoEmUso = conexaoEmUso()   // qual das candidatas respondeu
+
+      // Prova que a ESCRITA funciona, nao so a leitura. Sao contagens, e
+      // contagem nao revela nada de ninguem.
+      const [t] = await consultar(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(DISTINCT ip)::int AS ips,
+                COUNT(*) FILTER (WHERE em > NOW() - INTERVAL '15 minutes')::int AS recentes
+           FROM tentativas`
+      )
+      r.banco.tentativas = t
     } catch (e) {
       r.banco.erro = detalheErro(e)   // sem a connection string dentro
     }

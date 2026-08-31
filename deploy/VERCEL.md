@@ -31,7 +31,7 @@ Escolha uma frase longa que você lembre — **não existe "esqueci minha senha"
 aqui. Na pasta do projeto:
 
 ```bash
-node gerar-segredos.mjs "meu cafe as 6 da manha"
+node gerar-segredos.mjs "ESCREVA-AQUI-SUA-FRASE-SECRETA"
 ```
 
 Ele imprime dois valores rotulados, `SENHA_HASH` e `JWT_SECRET`. Copie os dois.
@@ -41,6 +41,21 @@ um liquidificador: não dá para voltar atrás. Se alguém ler tudo que está l�
 encontra o embaralhado, e o embaralhado não abre nada.
 
 > Depois de copiar, limpe o histórico: `Clear-History` no PowerShell.
+
+> ⚠️ **Escolha a sua frase, não copie o exemplo.** Uma versão anterior deste
+> guia trazia uma frase literal no lugar do espaço reservado, e ela acabou
+> virando a senha de verdade — uma senha que estava escrita, por extenso, num
+> arquivo público do repositório. Exemplo copiado é senha conhecida.
+
+## Trocar a senha depois
+
+```bash
+node trocar-senha.mjs
+```
+
+Pergunta a frase nova (escondida, sem eco na tela), gera o hash e atualiza a
+variável na Vercel. A frase não aparece na tela nem fica no histórico do
+terminal. Depois é só publicar — o script mostra o comando.
 
 ## 3. (nada a fazer — o segredo já saiu no passo 2)
 

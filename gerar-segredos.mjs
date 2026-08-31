@@ -21,7 +21,7 @@ if (!senha) {
 
 if (senha.length < 10) {
   console.log(`\nEssa senha tem ${senha.length} caracteres. Use pelo menos 10.`)
-  console.log('Uma frase e melhor que uma palavra: "meu cafe as 6 da manha" ja')
+  console.log('Uma frase e melhor que uma palavra: "ESCREVA-AQUI-SUA-FRASE-SECRETA" ja')
   console.log('e mais forte que "Xk9#2p" e voce nao esquece.\n')
   process.exit(1)
 }
