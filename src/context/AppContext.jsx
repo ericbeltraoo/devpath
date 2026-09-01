@@ -30,6 +30,11 @@ export function AppProvider({ children }) {
   const pularSalvamento = useRef(false)
   const timer = useRef(null)
 
+  // O banco ja tem progresso? E a trava que impede um navegador em branco de
+  // virar a nova verdade da conta. Acompanha o que esta gravado, nao a tela.
+  const nuvemTinhaProgresso = useRef(false)
+  const permitirEsvaziar = useRef(false)
+
   const userId = sessao?.user?.id ?? null
 
   // Restaura a sessao no carregamento. O refresh token vive num cookie
@@ -89,21 +94,26 @@ export function AppProvider({ children }) {
 
         const local = carregar()
 
+        // Um dono, uma linha no banco: o que esta na nuvem e o seu progresso,
+        // venha voce do PC de casa, do trabalho ou do celular. O navegador so
+        // e promovido a fonte da verdade quando o banco ainda nao tem nada.
         if (nuvem && temProgresso(nuvem.dados)) {
-          // A nuvem e a fonte da verdade.
+          nuvemTinhaProgresso.current = true
           pularSalvamento.current = true
           setEstado(normalizar(nuvem.dados))
           setUltimoSync(nuvem.atualizadoEm)
           setSincronia('ok')
         } else if (temProgresso(local)) {
-          // Primeira vez nesta conta e ha progresso neste navegador: migra.
+          // Banco vazio e ha progresso neste navegador: sobe.
+          nuvemTinhaProgresso.current = true
           setEstado(local)
           await salvarNuvem(local)
           if (!vivo) return
           setUltimoSync(new Date().toISOString())
           setSincronia('migrado')
         } else {
-          // Conta nova e navegador limpo.
+          // Banco vazio e navegador limpo: comeco de tudo.
+          nuvemTinhaProgresso.current = false
           pularSalvamento.current = true
           setEstado({ ...ESTADO_INICIAL, perfil: { ...ESTADO_INICIAL.perfil } })
           setSincronia('ok')
@@ -135,6 +145,22 @@ export function AppProvider({ children }) {
       return
     }
 
+    // Trava contra apagar a conta sem querer.
+    //
+    // Banco com progresso + estado em memoria vazio NAO e uma alteracao sua:
+    // e um navegador em branco pedindo para virar a nova verdade. Era esse o
+    // caminho que apagava meses de estudo — o PC novo abria zerado, voce
+    // refazia o onboarding e o primeiro clique subia o vazio por cima.
+    // Zerar de proposito continua funcionando: `resetar` libera a passagem.
+    if (nuvemTinhaProgresso.current && !temProgresso(estado)) {
+      if (!permitirEsvaziar.current) {
+        console.warn('[DevPath] Envio cancelado: estado vazio sobre uma conta com progresso.')
+        setSincronia('ok')
+        return
+      }
+      permitirEsvaziar.current = false
+    }
+
     setSincronia('salvando')
     clearTimeout(timer.current)
 
@@ -143,6 +169,7 @@ export function AppProvider({ children }) {
     const tentar = async (tentativa) => {
       try {
         await salvarNuvem(estado)
+        nuvemTinhaProgresso.current = temProgresso(estado)
         setUltimoSync(new Date().toISOString())
         setSincronia('ok')
         setErroSync(null)
@@ -186,6 +213,7 @@ export function AppProvider({ children }) {
     try {
       const nuvem = await carregarNuvem()
       if (nuvem) {
+        nuvemTinhaProgresso.current = temProgresso(nuvem.dados)
         pularSalvamento.current = true
         setEstado(normalizar(nuvem.dados))
         setUltimoSync(nuvem.atualizadoEm)
@@ -440,7 +468,12 @@ export function AppProvider({ children }) {
           },
         })),
 
-      resetar: () => setEstado({ ...ESTADO_INICIAL, perfil: { ...ESTADO_INICIAL.perfil } }),
+      // Zerar de proposito e o unico caminho que pode esvaziar a nuvem: a
+      // trava do efeito de salvar barra qualquer outro.
+      resetar: () => {
+        permitirEsvaziar.current = true
+        setEstado({ ...ESTADO_INICIAL, perfil: { ...ESTADO_INICIAL.perfil } })
+      },
     }
   }, [estado])
 

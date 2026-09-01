@@ -92,16 +92,34 @@ export function normalizar(salvo) {
   }
 }
 
-/** Diz se vale a pena migrar este estado para a nuvem. */
+// Mapas "id -> valor" que so ganham chave quando o usuario mexe em algo.
+const MAPAS_DE_PROGRESSO = [
+  'topicos', 'revisoes', 'exercicios', 'desafios', 'checklist', 'entrevistas', 'notas',
+]
+
+/**
+ * Diz se ha qualquer coisa produzida pelo usuario neste estado.
+ *
+ * Esta funcao decide quem vence quando o navegador e a nuvem discordam, entao
+ * ela precisa enxergar o estado INTEIRO. A versao anterior olhava 5 campos e
+ * ignorava revisoes, cronograma, notas, desafios e pomodoro: quem tinha
+ * progresso so nesses campos era lido como conta vazia, a resposta do banco ia
+ * para o lixo, o PC novo abria zerado — e o primeiro clique subia esse estado
+ * em branco por cima do progresso real.
+ *
+ * Regra ao mexer aqui: todo campo de ESTADO_INICIAL que o usuario alimenta
+ * entra nesta conta. Esquecer de somar um campo significa perder o dado dele.
+ */
 export function temProgresso(estado) {
-  if (!estado) return false
-  return (
-    estado.onboarded ||
-    Object.keys(estado.topicos || {}).length > 0 ||
-    Object.keys(estado.exercicios || {}).length > 0 ||
-    Object.keys(estado.entrevistas || {}).length > 0 ||
-    Object.keys(estado.linkedin?.respostas || {}).length > 0
-  )
+  if (!estado || typeof estado !== 'object') return false
+  if (estado.onboarded) return true
+  if (MAPAS_DE_PROGRESSO.some((c) => Object.keys(estado[c] || {}).length > 0)) return true
+  if (Object.keys(estado.linkedin?.respostas || {}).length > 0) return true
+  if ((estado.linkedin?.historico || []).length > 0) return true
+  if ((estado.cronograma?.blocos || []).length > 0) return true
+  if ((estado.pomodoro?.sessoes || []).length > 0) return true
+  if (estado.cursoSincronizado) return true
+  return false
 }
 
 export function carregar() {
