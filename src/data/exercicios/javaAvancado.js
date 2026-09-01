@@ -1,5 +1,11 @@
 // Exercicios dos modulos Java das secoes 14 a 25 do curso, mais o que o curso
-// nao cobre (testes, Docker, CI/CD). Ver exerciciosModulos.js para o contrato.
+// nao cobre (testes, Docker, CI/CD).
+//
+// FORMATO ANTIGO — materia-prima, ninguem importa este arquivo, nada daqui
+// aparece na tela. Nao apague: e a fila de conversao para o formato novo,
+// cujo indice e ../exercicios.js. O contrato dos campos e a regua de nivel
+// (o teto e a secao do curso em que o aluno esta) ficam em
+// ./FORMATO-ANTIGO.md — leia antes de editar qualquer enunciado daqui.
 
 export const JAVA_AVANCADO = {
   // ------------------------------------------------ S14 Excecoes

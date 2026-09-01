@@ -1,4 +1,10 @@
 // Exercicios da trilha Fundamentos de Engenharia.
+//
+// FORMATO ANTIGO — materia-prima, ninguem importa este arquivo, nada daqui
+// aparece na tela. Nao apague: e a fila de conversao para o formato novo,
+// cujo indice e ../exercicios.js. O contrato dos campos e a regua de nivel
+// (o teto e a secao do curso em que o aluno esta) ficam em
+// ./FORMATO-ANTIGO.md — leia antes de editar qualquer enunciado daqui.
 
 export const FUNDAMENTOS = {
   'base-f1-m1': [

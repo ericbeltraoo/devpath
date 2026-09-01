@@ -146,12 +146,9 @@ Todo o conteúdo vive em `src/data/` — nenhum componente precisa ser tocado pa
 | Arquivo | Conteúdo |
 |---|---|
 | `tracks.js` | Trilhas, fases, módulos, tópicos, entregáveis e links |
-| `ingles.js` | Trilha de inglês |
-| `exerciciosModulos.js` | Índice dos 3 exercícios por módulo (fontes em `exercicios/`) |
-| `exercises.js` | Exercícios da aba Exercícios |
+| `exercicios.js` | Índice dos exercícios publicados — só entra o que está completo |
+| `exercicios/` | Os enunciados. Leia `exercicios/FORMATO-ANTIGO.md` antes de mexer |
 | `desafios.js` | Projetos de portfólio |
-| `interview.js` | Etapas, perguntas, método STAR, checklist |
-| `linkedin.js` | Tutorial e critérios do avaliador, com os pesos |
 | `cursoNelio.js` | Grade do curso, usada para marcar onde você está |
 
 A ordem pedagógica do plano (qual fase vem antes de qual) fica em `src/lib/planner.js`,

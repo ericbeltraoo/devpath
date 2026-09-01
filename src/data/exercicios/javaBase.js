@@ -1,5 +1,10 @@
 // Exercicios dos modulos Java das secoes 4 a 13 do curso.
-// Ver exerciciosModulos.js para o contrato dos campos.
+//
+// FORMATO ANTIGO — materia-prima, ninguem importa este arquivo, nada daqui
+// aparece na tela. Nao apague: e a fila de conversao para o formato novo,
+// cujo indice e ../exercicios.js. O contrato dos campos e a regua de nivel
+// (o teto e a secao do curso em que o aluno esta) ficam em
+// ./FORMATO-ANTIGO.md — leia antes de editar qualquer enunciado daqui.
 
 export const JAVA_BASE = {
   // =========================================================================
@@ -315,21 +320,26 @@ export const JAVA_BASE = {
       nivel: 2,
       titulo: 'Importador de CSV de pedidos',
       tempo: '1h15',
-      contexto: 'Ler arquivo de terceiro é rotina em backend, e o dado nunca vem limpo.',
+      contexto: 'Dado que vem de fora nunca vem limpo, e limpar dado sujo é metade do trabalho de backend.',
       enunciado:
-        'Dado um vetor de Strings no formato "id;cliente;produto;quantidade;preco", faça o parse para objetos, some o faturamento, encontre o produto mais vendido e reporte as linhas inválidas com o motivo.',
+        'As linhas do CSV já chegam carregadas num vetor de Strings, no formato "id;cliente;produto;quantidade;preco". Faça o parse para objetos, some o faturamento, encontre o produto mais vendido e reporte as linhas inválidas com o motivo.',
       requisitos: [
-        'split e conversão de tipo com tratamento de erro',
-        'Linha com campo faltando ou número inválido não derruba o processamento',
+        'split e trim para separar e limpar os campos',
+        'VALIDAR antes de converter: um método que responde se a String é um inteiro válido, outro para o decimal, ambos escritos na mão percorrendo os caracteres',
+        'Zero try/catch: exceção é a seção 14, e este módulo é a 10',
+        'Linha com campo faltando ou número inválido é rejeitada com o motivo, sem derrubar as outras',
         'Relatório final: processadas, rejeitadas e motivo de cada rejeição',
-        'Ignorar espaços sobrando com trim',
       ],
       criteriosAceite: [
         'Uma linha malformada no meio não impede as demais de serem processadas',
         'Quantidade negativa é rejeitada, não somada',
         'O relatório diz QUAL linha falhou e por quê',
+        'Nenhum try/catch no código: toda rejeição foi decidida ANTES de converter',
       ],
-      dicas: ['Nunca confie em dado externo. Esta é a lição do exercício, não o split.'],
+      dicas: [
+        'Nunca confie em dado externo. Esta é a lição do exercício, não o split.',
+        'Validar na mão antes de converter é MULETA: quando você chegar em exceções (java-f2-m3), isso vira um try/catch em volta do parse, que é a forma adulta. Escreva a muleta sabendo que ela é temporária.',
+      ],
       revisa: ['java-f2-m1', 'java-f1-m5', 'java-f1-m2'],
     },
     {
