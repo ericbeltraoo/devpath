@@ -1,12 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useApp } from './context/AppContext'
 import Sidebar from './components/Sidebar'
+import RolarParaTopo from './components/RolarParaTopo'
 import Login from './pages/Login'
 import Onboarding from './pages/Onboarding'
 import Hoje from './pages/Hoje'
 import Trilha from './pages/Trilha'
 import Exercicios from './pages/Exercicios'
 import Exercicio from './pages/Exercicio'
+import Micro from './pages/Micro'
 import Pomodoro from './pages/Pomodoro'
 import Cronograma from './pages/Cronograma'
 import Config from './pages/Config'
@@ -35,6 +37,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <RolarParaTopo />
       <Sidebar />
       <main className="main">
         <Routes>
@@ -44,6 +47,7 @@ export default function App() {
           <Route path="/cronograma" element={<Cronograma />} />
           <Route path="/exercicios" element={<Exercicios />} />
           <Route path="/ex/:id" element={<Exercicio />} />
+          <Route path="/micro/:id" element={<Micro />} />
           <Route path="/config" element={<Config />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

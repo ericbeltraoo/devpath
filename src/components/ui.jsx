@@ -87,3 +87,39 @@ export function Callout({ tipo, titulo, children }) {
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Texto e Bloco
+// ---------------------------------------------------------------------------
+// Moravam dentro de Exercicio.jsx. Subiram para ca quando a tela de
+// micro-exercicio passou a precisar dos mesmos dois: duas copias divergem, e
+// a que diverge e sempre a que ninguem lembra de atualizar.
+// ---------------------------------------------------------------------------
+
+/** Quebra em paragrafos e destaca **negrito** e `codigo`. */
+export function Texto({ children }) {
+  return (
+    <>
+      {String(children).split('\n\n').map((p, i) => (
+        <p key={i} className="prosa">
+          {p.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((t, j) => {
+            if (t.startsWith('**')) return <b key={j}>{t.slice(2, -2)}</b>
+            if (t.startsWith('`')) return <code key={j}>{t.slice(1, -1)}</code>
+            return t
+          })}
+        </p>
+      ))}
+    </>
+  )
+}
+
+export function Bloco({ titulo, cor, children }) {
+  return (
+    <section style={{ marginTop: 30 }}>
+      <h2 style={{ fontSize: 15, letterSpacing: '.02em', color: cor || 'var(--text-2)', marginBottom: 10 }}>
+        {titulo}
+      </h2>
+      {children}
+    </section>
+  )
+}

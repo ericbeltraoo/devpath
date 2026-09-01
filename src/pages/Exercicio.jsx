@@ -4,39 +4,12 @@ import { useApp } from '../context/AppContext'
 import { EXERCICIOS_DATA_HORA } from '../data/exercicios/javaDataHora'
 import CronometroExercicio from '../components/CronometroExercicio'
 import { normalizarRegistro } from '../lib/cronometro'
+import { Texto, Bloco } from '../components/ui'
 
 const NIVEIS = {
   1: { nome: 'Aquecimento', cor: 'var(--ok)' },
   2: { nome: 'Mercado', cor: 'var(--warn)' },
   3: { nome: 'Entrevista', cor: 'var(--danger)' },
-}
-
-/** Quebra em paragrafos e destaca **negrito** e `codigo`. */
-function Texto({ children }) {
-  return (
-    <>
-      {String(children).split('\n\n').map((p, i) => (
-        <p key={i} className="prosa">
-          {p.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((t, j) => {
-            if (t.startsWith('**')) return <b key={j}>{t.slice(2, -2)}</b>
-            if (t.startsWith('`')) return <code key={j}>{t.slice(1, -1)}</code>
-            return t
-          })}
-        </p>
-      ))}
-    </>
-  )
-}
-
-function Bloco({ titulo, cor, children }) {
-  return (
-    <section style={{ marginTop: 30 }}>
-      <h2 style={{ fontSize: 15, letterSpacing: '.02em', color: cor || 'var(--text-2)', marginBottom: 10 }}>
-        {titulo}
-      </h2>
-      {children}
-    </section>
-  )
 }
 
 export default function Exercicio() {

@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext'
 import { TRILHAS, todosModulos } from '../data/tracks'
 import { progressoModulo } from '../lib/planner'
 import { porModulo } from '../data/exercicios'
+import { microPorTopico, microPorModulo } from '../data/micro'
 import { DESAFIOS } from '../data/desafios'
 import { Bar } from '../components/ui'
 
@@ -22,6 +23,7 @@ function Modulo({ modulo, aberto, alternar }) {
   const { estado, toggleTopico } = useApp()
   const p = progressoModulo(modulo, estado.topicos)
   const exercicios = porModulo(modulo.id)
+  const micros = microPorModulo(modulo.id)
 
   return (
     <div className="acc" style={{ marginBottom: 6 }}>
@@ -29,6 +31,7 @@ function Modulo({ modulo, aberto, alternar }) {
         <span style={{ flex: 1, minWidth: 0, fontWeight: 560 }}>{modulo.titulo}</span>
         <span className="small muted" style={{ flexShrink: 0 }}>{p.feitos}/{modulo.topicos.length}</span>
         {p.pct === 100 && <span className="chip ok">✓</span>}
+        {micros.length > 0 && <span className="chip">✎ {micros.length}</span>}
         {exercicios.length > 0 && <span className="chip">⌨️ {exercicios.length}</span>}
         <span className="muted small">{aberto ? '▲' : '▼'}</span>
       </div>
@@ -37,13 +40,40 @@ function Modulo({ modulo, aberto, alternar }) {
         <div className="acc-body" style={{ paddingBottom: 14 }}>
           {modulo.topicos.map((t, i) => {
             const chave = `${modulo.id}:${i}`
+            const marcado = !!estado.topicos[chave]
+            const micro = microPorTopico(modulo.id, i)
+
             return (
-              <label className="topico" key={i}>
-                <input type="checkbox" checked={!!estado.topicos[chave]} onChange={() => toggleTopico(modulo.id, i)} />
-                <span>{t}</span>
-              </label>
+              <div key={i} className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <label className="topico" style={{ flex: 1, minWidth: 0 }}>
+                  <input type="checkbox" checked={marcado} onChange={() => toggleTopico(modulo.id, i)} />
+                  <span>{t}</span>
+                </label>
+
+                {/* O micro-exercicio so aparece DEPOIS de voce marcar o topico.
+                    Antes disso ele seria spoiler do que voce ainda vai estudar;
+                    depois, e a pergunta "voce entendeu mesmo?". */}
+                {micro && marcado && (
+                  <Link
+                    className="btn sm"
+                    to={`/micro/${micro.id}`}
+                    title={`${micro.titulo} · ${micro.tempo}`}
+                    style={{ flexShrink: 0 }}
+                  >
+                    ✎ praticar
+                  </Link>
+                )}
+              </div>
             )
           })}
+
+          {micros.length > 0 && (
+            <p className="small muted" style={{ marginTop: 10 }}>
+              Marque um tópico para liberar o exercício curto dele. São {micros.length} no total
+              neste módulo, de dez minutos cada — os três grandes lá embaixo são a prova do
+              módulo inteiro, para quando você terminar.
+            </p>
+          )}
 
           {modulo.entregavel && (
             <p className="small muted" style={{ marginTop: 12 }}>
